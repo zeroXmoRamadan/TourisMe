@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { Search, Star, Users, TrendingUp, Shield, Award, HeartHandshake, Sparkles } from 'lucide-react';
+import { Search, Star, Users, TrendingUp, Shield, Award, HeartHandshake, Sparkles, MapPin, Landmark, Car, Bike, UtensilsCrossed } from 'lucide-react';
 import { tourPrograms } from '../data/tourPrograms';
+import attractionsService from '../services/attractionsService';
+import individualServicesService from '../services/individualServicesService';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import DiscountBadge from '../components/common/DiscountBadge';
@@ -18,10 +20,22 @@ const Home = () => {
     const heroRef = useRef(null);
     const statsRef = useRef(null);
     const cardsRef = useRef(null);
+    const servicesRef = useRef(null);
     const featuresRef = useRef(null);
     const ctaRef = useRef(null);
 
     const featuredPrograms = tourPrograms.slice(0, 3);
+    const topAttractions = attractionsService.getAll().slice(0, 3);
+    const popularServices = individualServicesService.getApproved()
+        .sort((a, b) => b.rating - a.rating || b.reviews - a.reviews)
+        .slice(0, 3);
+
+    const categoryIcons = {
+        car_rental: Car,
+        bicycle_rental: Bike,
+        restaurant: UtensilsCrossed,
+        temple_visit: Landmark
+    };
 
     const handleSearch = (e) => {
         e.preventDefault();
@@ -123,6 +137,25 @@ const Home = () => {
                     }
                 }
             );
+
+            // Services Cards Stagger Animation
+            if (servicesRef.current) {
+                gsap.fromTo(servicesRef.current.querySelectorAll('.service-card'),
+                    { opacity: 0, y: 60, scale: 0.9 },
+                    {
+                        opacity: 1,
+                        y: 0,
+                        scale: 1,
+                        duration: 0.8,
+                        stagger: 0.2,
+                        ease: 'power3.out',
+                        scrollTrigger: {
+                            trigger: servicesRef.current,
+                            start: 'top 70%',
+                        }
+                    }
+                );
+            }
 
             // Features Grid Animation
             gsap.fromTo(featuresRef.current.querySelectorAll('.feature-item'),
@@ -380,6 +413,111 @@ const Home = () => {
                     </div>
                 </div>
             </section>
+
+            {/* Popular Services */}
+            {popularServices.length > 0 && (
+                <section ref={servicesRef} className="section-padding relative bg-dark-800/10">
+                    <div className="container-custom">
+                        <div className="text-center mb-16">
+                            <h2 className="text-4xl md:text-5xl font-display font-bold mb-4 text-white">
+                                Popular <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">Services</span>
+                            </h2>
+                            <p className="text-xl text-white/50 max-w-2xl mx-auto">
+                                Handpicked individual services to complete your trip
+                            </p>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            {popularServices.map((service) => {
+                                const Icon = categoryIcons[service.category] || Landmark;
+                                return (
+                                    <div key={service.id} className="service-card h-full">
+                                        <Card hover padding={false} onClick={() => navigate('/services')} className="cursor-pointer h-full flex flex-col">
+                                            <div className="relative h-56 overflow-hidden">
+                                                <img
+                                                    src={service.image}
+                                                    alt={service.name}
+                                                    className="w-full h-full object-cover transform transition-transform duration-700 hover:scale-110"
+                                                    onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1568322445389-f64ac2515020?w=600'; }}
+                                                />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-dark-900 via-transparent to-transparent" />
+                                                <div className="absolute top-4 right-4">
+                                                    <span className="inline-flex items-center gap-1 px-3 py-1 bg-dark-700/80 backdrop-blur-sm border border-white/10 rounded-full text-sm font-medium text-blue-400">
+                                                        <Icon className="w-3 h-3" />
+                                                        {service.category.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                                    </span>
+                                                </div>
+                                                <div className="absolute bottom-4 left-4">
+                                                    <p className="text-2xl font-bold text-white">${service.price}</p>
+                                                </div>
+                                            </div>
+                                            <div className="p-6 flex-1 flex flex-col">
+                                                <h3 className="text-xl font-bold text-white mb-2">{service.name}</h3>
+                                                <p className="text-white/50 mb-4 line-clamp-2 flex-1">{service.description}</p>
+                                                <div className="flex items-center justify-between pt-4 border-t border-white/10">
+                                                    <div className="flex items-center gap-1">
+                                                        <Star className="w-4 h-4 fill-primary-400 text-primary-400" />
+                                                        <span className="font-semibold text-white/80">{service.rating}</span>
+                                                        <span className="text-xs text-white/40 ml-1">({service.reviews})</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </Card>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <div className="text-center mt-12 view-all-button">
+                            <Button variant="primary" size="lg" onClick={() => navigate('/services')}>
+                                View All Services
+                            </Button>
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {/* Popular Attractions */}
+            <section className="section-padding relative">
+                <div className="container-custom">
+                    <div className="text-center mb-16">
+                        <h2 className="text-4xl md:text-5xl font-display font-bold mb-4 text-white">
+                            Popular <span className="bg-gradient-to-r from-primary-400 to-secondary-500 bg-clip-text text-transparent">Attractions</span>
+                        </h2>
+                        <p className="text-xl text-white/50 max-w-2xl mx-auto">
+                            Discover the most iconic sites in ancient Luxor
+                        </p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        {topAttractions.map((attraction) => (
+                            <div key={attraction.id} className="tour-card h-full">
+                                <Card hover padding={false} onClick={() => navigate(`/attractions/${attraction.id}`)} className="cursor-pointer h-full flex flex-col">
+                                    <div className="relative h-56 overflow-hidden">
+                                        <img src={attraction.image} alt={attraction.name} className="w-full h-full object-cover transform transition-transform duration-700 hover:scale-110" />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-dark-900 via-transparent to-transparent" />
+                                        <div className="absolute top-4 right-4">
+                                            <span className="px-3 py-1 bg-dark-700/80 backdrop-blur-sm border border-white/10 rounded-full text-sm font-medium text-primary-400">{attraction.category}</span>
+                                        </div>
+                                    </div>
+                                    <div className="p-6 flex-1 flex flex-col">
+                                        <h3 className="text-xl font-bold text-white mb-2">{attraction.name}</h3>
+                                        <p className="text-white/50 mb-4 line-clamp-2 flex-1">{attraction.shortDescription}</p>
+                                        <div className="flex items-center justify-between pt-4 border-t border-white/10">
+                                            <div className="flex items-center gap-1">
+                                                <Star className="w-4 h-4 fill-primary-400 text-primary-400" />
+                                                <span className="font-semibold text-white/80">{attraction.rating}</span>
+                                            </div>
+                                            <span className="text-sm text-white/50 flex items-center gap-1"><MapPin className="w-4 h-4" />{attraction.location}</span>
+                                        </div>
+                                    </div>
+                                </Card>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="text-center mt-12">
+                        <Button variant="primary" size="lg" onClick={() => navigate('/attractions')}>View All Attractions</Button>
+                    </div>
+                </div>
+            </section>
+
 
             {/* Why Choose Us */}
             <section ref={featuresRef} className="section-padding relative overflow-hidden">

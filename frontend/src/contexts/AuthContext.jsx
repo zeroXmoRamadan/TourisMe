@@ -57,30 +57,17 @@ export const AuthProvider = ({ children }) => {
         return await authService.changePassword(currentPassword, newPassword);
     };
 
-    const getUserRole = () => {
-        return user?.role || null;
-    };
-
-    const getDashboardRoute = (role = user?.role) => {
-        const dashboardMap = {
-            Admin: '/dashboard/admin',
-            Tourist: '/dashboard/tourist',
-            LocalBusinessOwner: '/dashboard/provider',
-        };
-        return dashboardMap[role] || '/';
-    };
-
     const value = {
         user,
         loading,
         isAuthenticated: !!user,
+        isAdmin: user?.role === 'admin',
+        isVendor: user?.role === 'vendor',
         login,
         register,
         logout,
         updateProfile,
         changePassword,
-        getUserRole,
-        getDashboardRoute,
     };
 
     if (loading) {

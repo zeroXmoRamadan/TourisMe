@@ -10,18 +10,24 @@ export const sanitizeInput = (input) => {
 };
 
 // Secure storage wrapper (using base64 encoding for demo)
+// Uses encodeURIComponent/decodeURIComponent to safely handle UTF-8 characters
 export const secureStorage = {
     setItem: (key, value) => {
-        const encoded = btoa(JSON.stringify(value));
+        const encoded = btoa(encodeURIComponent(JSON.stringify(value)));
         localStorage.setItem(key, encoded);
     },
     getItem: (key) => {
         const encoded = localStorage.getItem(key);
         if (!encoded) return null;
         try {
-            return JSON.parse(atob(encoded));
+            return JSON.parse(decodeURIComponent(atob(encoded)));
         } catch {
-            return null;
+            // If decoding fails (e.g. old format), try direct atob fallback
+            try {
+                return JSON.parse(atob(encoded));
+            } catch {
+                return null;
+            }
         }
     },
     removeItem: (key) => {
