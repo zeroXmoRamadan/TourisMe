@@ -1,14 +1,44 @@
-import { sanitizeInput, secureStorage } from '../utils/security';
+import { sanitizeInput, secureStorage, hashPassword } from '../utils/security';
 import { loginSchema, signupSchema } from '../utils/validation';
 
+const USERS_KEY = 'luxor_users';
 const SESSION_KEY = 'luxor_session';
 const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours
-const API_BASE_URL =
-    import.meta.env?.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const ADMIN_SEEDED_KEY = 'luxor_admin_seeded';
 
 class AuthService {
+    constructor() {
+        this._seedAdmin();
+    }
+
+    _seedAdmin() {
+        const seeded = secureStorage.getItem(ADMIN_SEEDED_KEY);
+        if (seeded) return;
+
+        const users = secureStorage.getItem(USERS_KEY) || [];
+        const adminExists = users.find(u => u.role === 'admin');
+        if (!adminExists) {
+            // Pre-computed SHA-256 hash of 'admin123'
+            const precomputedHash = '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9';
+            const admin = {
+                id: 'admin-1',
+                firstName: 'Admin',
+                lastName: 'User',
+                email: 'admin@luxorexplore.com',
+                phone: '+201234567890',
+                password: precomputedHash,
+                role: 'admin',
+                createdAt: new Date().toISOString(),
+            };
+            users.push(admin);
+            secureStorage.setItem(USERS_KEY, users);
+        }
+        secureStorage.setItem(ADMIN_SEEDED_KEY, true);
+    }
+
     async register(userData) {
         try {
+            // Validate input
             const validation = signupSchema.safeParse(userData);
             if (!validation.success) {
                 return {
@@ -17,7 +47,8 @@ class AuthService {
                 };
             }
 
-            const sanitizedCommon = {
+            // Sanitize input
+            const sanitized = {
                 firstName: sanitizeInput(userData.firstName),
                 lastName: sanitizeInput(userData.lastName),
                 email: sanitizeInput(userData.email),
@@ -25,62 +56,36 @@ class AuthService {
                 password: userData.password,
             };
 
-            const fullName = `${sanitizedCommon.firstName} ${sanitizedCommon.lastName}`.trim();
-            const isTourist = userData.role === 'Tourist';
-
-            const endpoint = isTourist
-                ? '/auth/signup/tourist'
-                : '/auth/signup/owner';
-
-            const payload = isTourist
-                ? {
-                    name: fullName,
-                    email: sanitizedCommon.email,
-                    phone: sanitizedCommon.phone,
-                    password: sanitizedCommon.password,
-                }
-                : {
-                    name: fullName,
-                    email: sanitizedCommon.email,
-                    phone: sanitizedCommon.phone,
-                    password: sanitizedCommon.password,
-                    companyName: sanitizeInput(userData.companyName),
-                    licenseNumber: sanitizeInput(userData.licenseNumber),
-                };
-
-            const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify(payload),
-            });
-
-            const data = await response.json();
-
-            if (!response.ok) {
+            // Check if user exists
+            const users = secureStorage.getItem(USERS_KEY) || [];
+            if (users.find(u => u.email === sanitized.email)) {
                 return {
                     success: false,
-                    error: data?.message || 'Registration failed',
+                    error: 'Email already registered',
                 };
             }
 
-            const apiUser = data.user || {};
-            const [apiFirstName, ...apiLastParts] = (apiUser.name || '').split(' ');
-            const apiLastName = apiLastParts.join(' ');
+            // Hash password
+            const hashedPassword = await hashPassword(sanitized.password);
 
+            // Determine role
+            const role = userData.role === 'vendor' ? 'vendor' : 'user';
+
+            // Create user
             const newUser = {
-                id: apiUser.id,
-                firstName: sanitizedCommon.firstName || apiFirstName,
-                lastName: sanitizedCommon.lastName || apiLastName,
-                email: apiUser.email || sanitizedCommon.email,
-                phone: sanitizedCommon.phone,
-                role: apiUser.role || userData.role || 'Tourist',
-                companyName: apiUser.companyName || userData.companyName || null,
-                licenseNumber: userData.licenseNumber || null,
-                businessDescription: userData.businessDescription || null,
+                id: Date.now().toString(),
+                ...sanitized,
+                password: hashedPassword,
+                role,
+                companyName: role === 'vendor' ? sanitizeInput(userData.companyName || '') : undefined,
                 createdAt: new Date().toISOString(),
             };
 
+            delete newUser.password; // Don't store in user object returned
+            users.push({ ...newUser, password: hashedPassword });
+            secureStorage.setItem(USERS_KEY, users);
+
+            // Create session
             this.createSession(newUser);
 
             return {
@@ -90,13 +95,14 @@ class AuthService {
         } catch (error) {
             return {
                 success: false,
-                error: 'Registration failed. Please try again.',
+                error: 'Registration failed',
             };
         }
     }
 
     async login(email, password) {
         try {
+            // Validate
             const validation = loginSchema.safeParse({ email, password });
             if (!validation.success) {
                 return {
@@ -105,62 +111,40 @@ class AuthService {
                 };
             }
 
-            const response = await fetch(`${API_BASE_URL}/auth/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({
-                    email: sanitizeInput(email),
-                    password,
-                }),
-            });
+            // Get users
+            const users = secureStorage.getItem(USERS_KEY) || [];
+            const hashedPassword = await hashPassword(password);
 
-            const data = await response.json();
+            const user = users.find(
+                u => u.email === email && u.password === hashedPassword
+            );
 
-            if (!response.ok) {
+            if (!user) {
                 return {
                     success: false,
-                    error: data?.message || 'Invalid email or password',
+                    error: 'Invalid email or password',
                 };
             }
 
-            const apiUser = data.user || {};
-            const [firstName, ...lastParts] = (apiUser.name || '').split(' ');
-            const lastName = lastParts.join(' ');
-
-            const user = {
-                id: apiUser.id,
-                firstName: firstName || '',
-                lastName: lastName || '',
-                email: apiUser.email || email,
-                phone: apiUser.phone || '',
-                role: apiUser.role,
-                companyName: apiUser.companyName || null,
-                createdAt: new Date().toISOString(),
-            };
-
-            this.createSession(user);
+            // Create session
+            const userWithoutPassword = { ...user };
+            delete userWithoutPassword.password;
+            this.createSession(userWithoutPassword);
 
             return {
                 success: true,
-                user,
+                user: userWithoutPassword,
             };
         } catch (error) {
             return {
                 success: false,
-                error: 'Login failed. Please try again.',
+                error: 'Login failed',
             };
         }
     }
 
     logout() {
         secureStorage.removeItem(SESSION_KEY);
-
-        // Best-effort backend logout to clear cookie
-        fetch(`${API_BASE_URL}/auth/logout`, {
-            method: 'POST',
-            credentials: 'include',
-        }).catch(() => {});
     }
 
     createSession(user) {
@@ -175,6 +159,7 @@ class AuthService {
         const session = secureStorage.getItem(SESSION_KEY);
         if (!session) return null;
 
+        // Check if expired
         if (Date.now() > session.expiresAt) {
             this.logout();
             return null;
@@ -192,28 +177,78 @@ class AuthService {
         return this.getCurrentUser() !== null;
     }
 
-    async updateProfile(updates) {
-        const currentUser = this.getCurrentUser();
-        if (!currentUser) {
-            return { success: false, error: 'Not authenticated' };
-        }
-
-        const updatedUser = {
-            ...currentUser,
-            firstName: sanitizeInput(updates.firstName ?? currentUser.firstName),
-            lastName: sanitizeInput(updates.lastName ?? currentUser.lastName),
-            phone: sanitizeInput(updates.phone ?? currentUser.phone),
-        };
-
-        this.createSession(updatedUser);
-        return { success: true, user: updatedUser };
+    isAdmin() {
+        const user = this.getCurrentUser();
+        return user?.role === 'admin';
     }
 
-    async changePassword() {
-        return {
-            success: false,
-            error: 'Change password via backend endpoint (not yet wired).',
-        };
+    isVendor() {
+        const user = this.getCurrentUser();
+        return user?.role === 'vendor';
+    }
+
+    async updateProfile(updates) {
+        try {
+            const currentUser = this.getCurrentUser();
+            if (!currentUser) {
+                return { success: false, error: 'Not authenticated' };
+            }
+
+            const users = secureStorage.getItem(USERS_KEY) || [];
+            const userIndex = users.findIndex(u => u.id === currentUser.id);
+
+            if (userIndex === -1) {
+                return { success: false, error: 'User not found' };
+            }
+
+            // Update user
+            users[userIndex] = {
+                ...users[userIndex],
+                firstName: sanitizeInput(updates.firstName),
+                lastName: sanitizeInput(updates.lastName),
+                phone: sanitizeInput(updates.phone),
+            };
+
+            secureStorage.setItem(USERS_KEY, users);
+
+            // Update session
+            const updatedUser = { ...users[userIndex] };
+            delete updatedUser.password;
+            this.createSession(updatedUser);
+
+            return { success: true, user: updatedUser };
+        } catch (error) {
+            return { success: false, error: 'Update failed' };
+        }
+    }
+
+    async changePassword(currentPassword, newPassword) {
+        try {
+            const currentUser = this.getCurrentUser();
+            if (!currentUser) {
+                return { success: false, error: 'Not authenticated' };
+            }
+
+            const users = secureStorage.getItem(USERS_KEY) || [];
+            const currentHashedPassword = await hashPassword(currentPassword);
+            const user = users.find(
+                u => u.id === currentUser.id && u.password === currentHashedPassword
+            );
+
+            if (!user) {
+                return { success: false, error: 'Current password is incorrect' };
+            }
+
+            // Update password
+            const newHashedPassword = await hashPassword(newPassword);
+            const userIndex = users.findIndex(u => u.id === currentUser.id);
+            users[userIndex].password = newHashedPassword;
+            secureStorage.setItem(USERS_KEY, users);
+
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: 'Password change failed' };
+        }
     }
 }
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
-import { User, Mail, Lock, Phone, Loader2, Plane, ArrowLeft } from 'lucide-react';
+import { User, Mail, Lock, Phone, Loader2, Plane, ArrowLeft, Building2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
@@ -16,6 +16,8 @@ const Signup = () => {
         password: '',
         confirmPassword: '',
         terms: false,
+        role: 'user',
+        companyName: '',
     });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -112,6 +114,24 @@ const Signup = () => {
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-4">
+                    {/* Account Type Toggle */}
+                    <div className="flex gap-2 p-1 bg-dark-700/50 rounded-xl border border-white/10">
+                        <button
+                            type="button"
+                            onClick={() => setFormData(prev => ({ ...prev, role: 'user' }))}
+                            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 ${formData.role === 'user' ? 'bg-primary-500/20 text-primary-400 shadow-sm' : 'text-white/50 hover:text-white/70'}`}
+                        >
+                            <User className="w-4 h-4" />Tourist
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setFormData(prev => ({ ...prev, role: 'vendor' }))}
+                            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 ${formData.role === 'vendor' ? 'bg-blue-500/20 text-blue-400 shadow-sm' : 'text-white/50 hover:text-white/70'}`}
+                        >
+                            <Building2 className="w-4 h-4" />Tourism Company
+                        </button>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                         <Input
                             label="First Name"
@@ -154,6 +174,18 @@ const Signup = () => {
                         icon={Phone}
                         required
                     />
+
+                    {formData.role === 'vendor' && (
+                        <Input
+                            label="Company Name"
+                            name="companyName"
+                            placeholder="Your tourism company name"
+                            value={formData.companyName}
+                            onChange={handleChange}
+                            icon={Building2}
+                            required
+                        />
+                    )}
 
                     <Input
                         label="Password"
