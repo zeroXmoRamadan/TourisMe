@@ -101,7 +101,7 @@ export const createService = async (req, res) => {
     }
 
     // Extract uploaded images from Multer/Cloudinary
-    const images = req.files ? req.files.map(file => file.path) : [];
+    const images = req.files ? req.files.map(file => file.path || file.secure_url || file.url) : [];
 
     // Build the service data payload
     const serviceData = {
@@ -137,15 +137,18 @@ export const updateService = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to update this service' });
     }
 
-    // Handle new image uploads
+    // Prevent updating discriminator key (throws Mongoose error)
+    if (req.body.serviceType) {
+        delete req.body.serviceType;
+    }
+
+    // Handle new image uploads — replace existing images if new ones are provided
     if (req.files && req.files.length > 0) {
-      const newImages = req.files.map(file => file.path);
-      // Append new images to existing ones
-      req.body.images = [...(service.images || []), ...newImages];
+      req.body.images = req.files.map(file => file.path);
     }
 
     service = await Service.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
+      returnDocument: 'after',
       runValidators: true
     }).populate('ownerId', 'name companyName');
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import gsap from 'gsap';
-import { Plus, Edit2, Trash2, Package, X, Save, Image, Clock, CheckCircle, XCircle, BarChart3, Users, DollarSign, TrendingUp, Car, Bike, UtensilsCrossed, Landmark } from 'lucide-react';
+import { Plus, Edit2, Trash2, Package, X, Save, BarChart3, Users, Car, Bike, UtensilsCrossed, Landmark, Loader2 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import vendorService from '../../services/vendorService';
 import individualServicesService from '../../services/individualServicesService';
@@ -12,21 +12,20 @@ import Alert from '../../components/common/Alert';
 const SERVICE_CATEGORY_ICONS = { car_rental: Car, bicycle_rental: Bike, restaurant: UtensilsCrossed, temple_visit: Landmark };
 
 const emptyForm = {
-    name: '', company: '', image: '', duration: '', price: '', originalPrice: '',
-    discount: '', groupSize: '', difficulty: 'Easy', category: 'Cultural',
-    description: '', highlights: [''], included: [''],
+    name: '', description: '', price: '', durationDays: '', itinerary: '', includedItems: [''], imageFile: null
 };
 
 const emptySvcForm = {
-    name: '', category: 'car_rental', image: '', duration: '', price: '',
-    location: '', capacity: '', description: '',
+    name: '', category: 'Rental', price: '', description: '',
+    vehicleType: '', capacity: '', conditions: '',
+    cuisineType: '', tableCapacity: '', imageFile: null
 };
 
 const VendorDashboard = () => {
     const { user } = useAuth();
     const [activeTab, setActiveTab] = useState('programs');
     const [programs, setPrograms] = useState([]);
-    const [stats, setStats] = useState({ total: 0, approved: 0, pending: 0, rejected: 0, totalBookings: 0 });
+    const [stats, setStats] = useState({ total: 0, totalBookings: 0 });
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [formData, setFormData] = useState(emptyForm);
@@ -39,14 +38,16 @@ const VendorDashboard = () => {
     const [editingSvcId, setEditingSvcId] = useState(null);
     const [svcFormData, setSvcFormData] = useState(emptySvcForm);
     const [svcFilter, setSvcFilter] = useState('all');
+    const [submitting, setSubmitting] = useState(false);
     const headerRef = useRef(null);
     const contentRef = useRef(null);
 
-    const load = () => {
-        const p = vendorService.getByVendor(user.id);
+    const load = async () => {
+        const p = await vendorService.getByVendor();
         setPrograms(p);
-        setStats(vendorService.getStats(user.id));
-        setMyServices(individualServicesService.getByVendor(user.id));
+        setStats(vendorService.getStats(p));
+        const s = await individualServicesService.getByVendor();
+        setMyServices(s);
     };
 
     useEffect(() => { load(); }, []);
@@ -57,45 +58,59 @@ const VendorDashboard = () => {
     }, []);
 
     const openCreate = () => {
-        setFormData({ ...emptyForm, company: user.companyName || '' });
+        setFormData(emptyForm);
         setEditingId(null); setShowForm(true);
     };
 
     const openEdit = (p) => {
         setFormData({
-            name: p.name, company: p.company || '', image: p.image, duration: p.duration, price: p.price,
-            originalPrice: p.originalPrice || '', discount: p.discount || '', groupSize: p.groupSize,
-            difficulty: p.difficulty, category: p.category, description: p.description,
-            highlights: p.highlights?.length > 0 ? [...p.highlights] : [''],
-            included: p.included?.length > 0 ? [...p.included] : [''],
+            name: p.name, durationDays: p.durationDays || '', price: p.price,
+            itinerary: p.itinerary || '', description: p.description || '',
+            includedItems: p.includedItems?.length > 0 ? [...p.includedItems] : [''],
+            imageFile: null
         });
-        setEditingId(p.id); setShowForm(true);
+        setEditingId(p._id); setShowForm(true);
     };
 
     const closeForm = () => { setShowForm(false); setEditingId(null); setFormData(emptyForm); };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        const data = {
-            ...formData,
-            price: Number(formData.price),
-            originalPrice: Number(formData.originalPrice) || Number(formData.price),
-            discount: Number(formData.discount) || 0,
-            highlights: formData.highlights.filter(h => h.trim()),
-            included: formData.included.filter(h => h.trim()),
-        };
+        if (submitting) return;
+        setSubmitting(true);
+        const data = new FormData();
+        data.append('serviceType', 'TourPackage');
+        data.append('name', formData.name);
+        data.append('description', formData.description);
+        data.append('price', Number(formData.price));
+        data.append('durationDays', Number(formData.durationDays));
+        data.append('itinerary', formData.itinerary);
+        
+        const included = formData.includedItems.filter(h => h.trim());
+        included.forEach((item, index) => {
+            data.append(`includedItems[${index}]`, item);
+        });
+
+        if (formData.imageFile) {
+            Array.from(formData.imageFile).forEach(file => {
+                data.append('images', file);
+            });
+        }
+
         const result = editingId
-            ? vendorService.update(editingId, data, user.id)
-            : vendorService.submit(data, user);
+            ? await vendorService.update(editingId, data)
+            : await vendorService.submit(data);
+
         if (result.success) {
-            setAlert({ type: 'success', message: editingId ? 'Program updated!' : 'Program submitted for approval!' });
+            setAlert({ type: 'success', message: editingId ? 'Program updated!' : 'Program submitted successfully!' });
             load(); closeForm();
         } else { setAlert({ type: 'error', message: result.error }); }
+        setSubmitting(false);
         setTimeout(() => setAlert(null), 3000);
     };
 
-    const handleDelete = (id) => {
-        const result = vendorService.delete(id, user.id);
+    const handleDelete = async (id) => {
+        const result = await vendorService.delete(id);
         if (result.success) { setAlert({ type: 'success', message: 'Program deleted!' }); load(); }
         else { setAlert({ type: 'error', message: result.error }); }
         setDeleteConfirm(null); setTimeout(() => setAlert(null), 3000);
@@ -111,46 +126,67 @@ const VendorDashboard = () => {
         setFormData({ ...formData, [field]: arr.length > 0 ? arr : [''] });
     };
 
-    const filteredPrograms = filter === 'all' ? programs : programs.filter(p => p.status === filter);
-    const filteredServices = svcFilter === 'all' ? myServices : myServices.filter(s => s.status === svcFilter);
+    const filteredPrograms = programs;
+    const filteredServices = myServices;
 
     // Service handlers
     const openCreateSvc = () => { setSvcFormData(emptySvcForm); setEditingSvcId(null); setShowSvcForm(true); };
     const closeSvcForm = () => { setShowSvcForm(false); setEditingSvcId(null); setSvcFormData(emptySvcForm); };
-    const handleSvcSubmit = (e) => {
+
+    const handleSvcSubmit = async (e) => {
         e.preventDefault();
-        const data = { ...svcFormData, price: Number(svcFormData.price) };
+        if (submitting) return;
+        setSubmitting(true);
+        const data = new FormData();
+        data.append('serviceType', svcFormData.category);
+        data.append('name', svcFormData.name);
+        data.append('description', svcFormData.description);
+        data.append('price', Number(svcFormData.price));
+
+        if (svcFormData.category === 'Rental') {
+            data.append('vehicleType', svcFormData.vehicleType);
+            data.append('capacity', Number(svcFormData.capacity));
+            data.append('conditions', svcFormData.conditions);
+        } else if (svcFormData.category === 'Restaurant') {
+            data.append('cuisineType', svcFormData.cuisineType);
+            data.append('tableCapacity', Number(svcFormData.tableCapacity));
+        }
+
+        if (svcFormData.imageFile) {
+            Array.from(svcFormData.imageFile).forEach(file => {
+                data.append('images', file);
+            });
+        }
+
         const result = editingSvcId
-            ? individualServicesService.update(editingSvcId, data, user.id)
-            : individualServicesService.submit(data, user);
-        if (result.success) { setAlert({ type: 'success', message: editingSvcId ? 'Service updated!' : 'Service submitted for approval!' }); load(); closeSvcForm(); }
-        else { setAlert({ type: 'error', message: result.error }); }
+            ? await individualServicesService.update(editingSvcId, data)
+            : await individualServicesService.submit(data);
+
+        if (result.success) { 
+            setAlert({ type: 'success', message: editingSvcId ? 'Service updated!' : 'Service submitted successfully!' }); 
+            load(); closeSvcForm(); 
+        } else { setAlert({ type: 'error', message: result.error }); }
+        setSubmitting(false);
         setTimeout(() => setAlert(null), 3000);
     };
-    const handleDeleteSvc = (id) => {
-        const result = individualServicesService.delete(id, user.id);
+
+    const handleDeleteSvc = async (id) => {
+        const result = await individualServicesService.delete(id);
         if (result.success) { setAlert({ type: 'success', message: 'Service deleted!' }); load(); }
         setDeleteConfirm(null); setTimeout(() => setAlert(null), 3000);
     };
+
     const openEditSvc = (s) => {
-        setSvcFormData({ name: s.name, category: s.category, image: s.image, duration: s.duration, price: s.price, location: s.location || '', capacity: s.capacity || '', description: s.description });
-        setEditingSvcId(s.id); setShowSvcForm(true);
+        setSvcFormData({ 
+            name: s.name, category: s.serviceType, price: s.price, description: s.description || '', 
+            vehicleType: s.vehicleType || '', capacity: s.capacity || '', conditions: s.conditions || '',
+            cuisineType: s.cuisineType || '', tableCapacity: s.tableCapacity || '',
+            imageFile: null 
+        });
+        setEditingSvcId(s._id); setShowSvcForm(true);
     };
 
-    const statusBadge = (status) => {
-        const styles = {
-            pending: 'bg-yellow-500/10 text-yellow-400',
-            approved: 'bg-green-500/10 text-green-400',
-            rejected: 'bg-red-500/10 text-red-400',
-        };
-        const icons = { pending: Clock, approved: CheckCircle, rejected: XCircle };
-        const Icon = icons[status];
-        return (
-            <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${styles[status]}`}>
-                <Icon className="w-3 h-3" />{status.charAt(0).toUpperCase() + status.slice(1)}
-            </span>
-        );
-    };
+
 
     return (
         <div className="min-h-screen bg-dark-900 pt-20 pb-12">
@@ -179,18 +215,15 @@ const VendorDashboard = () => {
                     </div>
 
                     {/* Stats */}
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+                    <div className="grid grid-cols-2 gap-4 mb-6">
                         {[
                             { label: 'Total Programs', value: stats.total, icon: Package, color: 'primary' },
-                            { label: 'Approved', value: stats.approved, icon: CheckCircle, color: 'green' },
-                            { label: 'Pending', value: stats.pending, icon: Clock, color: 'yellow' },
-                            { label: 'Rejected', value: stats.rejected, icon: XCircle, color: 'red' },
                             { label: 'Total Bookings', value: stats.totalBookings, icon: Users, color: 'secondary' },
                         ].map((s, i) => {
                             const Icon = s.icon;
                             return (
                                 <Card key={i} className="text-center">
-                                    <Icon className={`w-6 h-6 mx-auto mb-2 text-${s.color === 'primary' ? 'primary' : s.color === 'secondary' ? 'secondary' : s.color}-400`} />
+                                    <Icon className={`w-6 h-6 mx-auto mb-2 text-${s.color === 'primary' ? 'primary' : 'secondary'}-400`} />
                                     <p className="text-2xl font-bold text-white">{s.value}</p>
                                     <p className="text-xs text-white/40">{s.label}</p>
                                 </Card>
@@ -213,50 +246,50 @@ const VendorDashboard = () => {
                             <form onSubmit={handleSubmit} className="space-y-5">
                                 <Input label="Program Name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Luxor Ancient Wonders - 3 Days" required />
                                 <div className="grid grid-cols-2 gap-4">
-                                    <Input label="Company Name" value={formData.company} onChange={(e) => setFormData({ ...formData, company: e.target.value })} required />
-                                    <Input label="Image URL" value={formData.image} onChange={(e) => setFormData({ ...formData, image: e.target.value })} icon={Image} required />
-                                </div>
-                                <div className="grid grid-cols-3 gap-4">
-                                    <Input label="Duration" value={formData.duration} onChange={(e) => setFormData({ ...formData, duration: e.target.value })} placeholder="e.g. 3 Days / 2 Nights" required />
                                     <Input label="Price ($)" type="number" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} required />
-                                    <Input label="Discount (%)" type="number" value={formData.discount} onChange={(e) => setFormData({ ...formData, discount: e.target.value })} placeholder="0" />
-                                </div>
-                                <div className="grid grid-cols-3 gap-4">
-                                    <Input label="Group Size" value={formData.groupSize} onChange={(e) => setFormData({ ...formData, groupSize: e.target.value })} placeholder="Up to 15" required />
-                                    <div>
-                                        <label className="block text-sm font-medium mb-2 text-white/80">Difficulty</label>
-                                        <select value={formData.difficulty} onChange={(e) => setFormData({ ...formData, difficulty: e.target.value })} className="w-full px-4 py-3 bg-dark-700/50 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all duration-300">
-                                            {['Easy', 'Moderate', 'Challenging'].map(d => <option key={d} value={d}>{d}</option>)}
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-2 text-white/80">Category</label>
-                                        <select value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} className="w-full px-4 py-3 bg-dark-700/50 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all duration-300">
-                                            {['Cultural', 'Adventure', 'Luxury', 'Family', 'Historical'].map(c => <option key={c} value={c}>{c}</option>)}
-                                        </select>
-                                    </div>
+                                    <Input label="Duration (Days)" type="number" value={formData.durationDays} onChange={(e) => setFormData({ ...formData, durationDays: e.target.value })} required />
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium mb-2 text-white/80">Description</label>
                                     <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={3} className="w-full px-4 py-3 bg-dark-700/50 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all duration-300" required />
                                 </div>
-                                {['highlights', 'included'].map(field => (
+                                <div>
+                                    <label className="block text-sm font-medium mb-2 text-white/80">Itinerary</label>
+                                    <textarea value={formData.itinerary} onChange={(e) => setFormData({ ...formData, itinerary: e.target.value })} rows={3} className="w-full px-4 py-3 bg-dark-700/50 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all duration-300" placeholder="e.g. Day 1: Arrival..." required />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium mb-2 text-white/80">Upload Images <span className="text-white/30 font-normal">(max 10MB each)</span></label>
+                                    <input type="file" multiple accept="image/*" onChange={(e) => {
+                                        const files = Array.from(e.target.files);
+                                        const oversized = files.find(f => f.size > 10 * 1024 * 1024);
+                                        if (oversized) {
+                                            setAlert({ type: 'error', message: `"${oversized.name}" exceeds the 10MB limit. Please choose a smaller image.` });
+                                            e.target.value = '';
+                                            return;
+                                        }
+                                        setFormData({ ...formData, imageFile: e.target.files });
+                                    }} className="w-full px-4 py-3 bg-dark-700/50 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all duration-300" />
+                                </div>
+                                {['includedItems'].map(field => (
                                     <div key={field}>
-                                        <label className="block text-sm font-medium mb-2 text-white/80 capitalize">{field}</label>
+                                        <label className="block text-sm font-medium mb-2 text-white/80 capitalize">Included Items</label>
                                         <div className="space-y-2">
                                             {formData[field].map((item, i) => (
                                                 <div key={i} className="flex gap-2">
-                                                    <input type="text" value={item} onChange={(e) => updateList(field, i, e.target.value)} className="flex-1 px-4 py-2 bg-dark-700/50 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all duration-300" placeholder={`${field.slice(0, -1)} ${i + 1}`} />
+                                                    <input type="text" value={item} onChange={(e) => updateList(field, i, e.target.value)} className="flex-1 px-4 py-2 bg-dark-700/50 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all duration-300" placeholder={`Item ${i + 1}`} />
                                                     {formData[field].length > 1 && <button type="button" onClick={() => removeListItem(field, i)} className="p-2 hover:bg-red-500/10 rounded-lg"><X className="w-4 h-4 text-red-400" /></button>}
                                                 </div>
                                             ))}
                                         </div>
-                                        <button type="button" onClick={() => addListItem(field)} className="mt-2 text-sm text-primary-400 hover:text-primary-300 flex items-center gap-1"><Plus className="w-4 h-4" />Add {field.slice(0, -1)}</button>
+                                        <button type="button" onClick={() => addListItem(field)} className="mt-2 text-sm text-primary-400 hover:text-primary-300 flex items-center gap-1"><Plus className="w-4 h-4" />Add Item</button>
                                     </div>
                                 ))}
                                 <div className="flex gap-3 pt-4">
-                                    <Button type="submit" variant="primary" className="flex items-center gap-2"><Save className="w-4 h-4" />{editingId ? 'Update' : 'Submit for Approval'}</Button>
-                                    <Button type="button" variant="ghost" onClick={closeForm}>Cancel</Button>
+                                    <Button type="submit" variant="primary" disabled={submitting} className="flex items-center gap-2">
+                                        {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                        {submitting ? 'Saving...' : editingId ? 'Update' : 'Save'}
+                                    </Button>
+                                    <Button type="button" variant="ghost" onClick={closeForm} disabled={submitting}>Cancel</Button>
                                 </div>
                             </form>
                         </Card>
@@ -289,75 +322,58 @@ const VendorDashboard = () => {
                 <div ref={contentRef}>
                     {activeTab === 'programs' ? (
                         <>
-                            <div className="flex gap-2 mb-6">
-                                {['all', 'pending', 'approved', 'rejected'].map(f => (
-                                    <button key={f} onClick={() => setFilter(f)} className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${filter === f ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30' : 'bg-dark-700/50 text-white/50 border border-white/5 hover:bg-white/5'}`}>
-                                        {f.charAt(0).toUpperCase() + f.slice(1)} {f === 'all' ? `(${programs.length})` : `(${programs.filter(p => p.status === f).length})`}
-                                    </button>
-                                ))}
-                            </div>
                             <Card>
                                 <div className="overflow-x-auto">
                                     <table className="w-full">
                                         <thead><tr className="border-b border-white/10">
                                             <th className="text-left py-4 px-4 text-white/60 font-medium text-sm">Program</th>
                                             <th className="text-left py-4 px-4 text-white/60 font-medium text-sm">Price</th>
-                                            <th className="text-left py-4 px-4 text-white/60 font-medium text-sm">Status</th>
                                             <th className="text-left py-4 px-4 text-white/60 font-medium text-sm">Bookings</th>
                                             <th className="text-right py-4 px-4 text-white/60 font-medium text-sm">Actions</th>
                                         </tr></thead>
                                         <tbody>
                                             {filteredPrograms.map((p) => (
-                                                <tr key={p.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                                                    <td className="py-4 px-4"><div className="flex items-center gap-3"><img src={p.image} alt={p.name} className="w-12 h-12 rounded-lg object-cover" /><div><p className="font-semibold text-white text-sm">{p.name}</p><p className="text-xs text-white/40">{p.duration}</p></div></div></td>
+                                                <tr key={p._id || p.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                                    <td className="py-4 px-4"><div className="flex items-center gap-3"><img src={p.images && p.images.length > 0 ? p.images[0] : 'https://images.unsplash.com/photo-1549317661-bd32c8ce0e6e?w=100'} alt={p.name} className="w-12 h-12 rounded-lg object-cover" /><div><p className="font-semibold text-white text-sm">{p.name}</p><p className="text-xs text-white/40">{p.durationDays} Days</p></div></div></td>
                                                     <td className="py-4 px-4 text-white/80">${p.price}</td>
-                                                    <td className="py-4 px-4">{statusBadge(p.status)}</td>
                                                     <td className="py-4 px-4 text-white/80">{p.bookings || 0}</td>
-                                                    <td className="py-4 px-4"><div className="flex items-center justify-end gap-2"><button onClick={() => openEdit(p)} className="p-2 hover:bg-primary-500/10 rounded-lg transition-colors"><Edit2 className="w-4 h-4 text-primary-400" /></button><button onClick={() => setDeleteConfirm(p.id)} className="p-2 hover:bg-red-500/10 rounded-lg transition-colors"><Trash2 className="w-4 h-4 text-red-400" /></button></div></td>
+                                                    <td className="py-4 px-4"><div className="flex items-center justify-end gap-2"><button onClick={() => openEdit(p)} className="p-2 hover:bg-primary-500/10 rounded-lg transition-colors"><Edit2 className="w-4 h-4 text-primary-400" /></button><button onClick={() => setDeleteConfirm(p._id || p.id)} className="p-2 hover:bg-red-500/10 rounded-lg transition-colors"><Trash2 className="w-4 h-4 text-red-400" /></button></div></td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                     </table>
-                                    {filteredPrograms.length === 0 && <div className="text-center py-12"><Package className="w-12 h-12 text-white/10 mx-auto mb-3" /><p className="text-white/40">{filter === 'all' ? 'No programs yet.' : `No ${filter} programs.`}</p></div>}
+                                    {filteredPrograms.length === 0 && <div className="text-center py-12"><Package className="w-12 h-12 text-white/10 mx-auto mb-3" /><p className="text-white/40">No programs yet.</p></div>}
                                 </div>
                             </Card>
                         </>
                     ) : (
                         <>
                             {/* Services Tab */}
-                            <div className="flex gap-2 mb-6">
-                                {['all', 'pending', 'approved', 'rejected'].map(f => (
-                                    <button key={f} onClick={() => setSvcFilter(f)} className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${svcFilter === f ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-dark-700/50 text-white/50 border border-white/5 hover:bg-white/5'}`}>
-                                        {f.charAt(0).toUpperCase() + f.slice(1)} ({f === 'all' ? myServices.length : myServices.filter(s => s.status === f).length})
-                                    </button>
-                                ))}
-                            </div>
                             <Card>
+
                                 <div className="overflow-x-auto">
                                     <table className="w-full">
                                         <thead><tr className="border-b border-white/10">
                                             <th className="text-left py-4 px-4 text-white/60 font-medium text-sm">Service</th>
                                             <th className="text-left py-4 px-4 text-white/60 font-medium text-sm">Category</th>
                                             <th className="text-left py-4 px-4 text-white/60 font-medium text-sm">Price</th>
-                                            <th className="text-left py-4 px-4 text-white/60 font-medium text-sm">Status</th>
                                             <th className="text-right py-4 px-4 text-white/60 font-medium text-sm">Actions</th>
                                         </tr></thead>
                                         <tbody>
                                             {filteredServices.map((s) => {
-                                                const CatIcon = SERVICE_CATEGORY_ICONS[s.category] || Package;
+                                                const CatIcon = SERVICE_CATEGORY_ICONS[s.serviceType] || Package;
                                                 return (
-                                                    <tr key={s.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                                                        <td className="py-4 px-4"><div className="flex items-center gap-3"><img src={s.image} alt={s.name} className="w-12 h-12 rounded-lg object-cover" onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1568322445389-f64ac2515020?w=100'; }} /><div><p className="font-semibold text-white text-sm">{s.name}</p><p className="text-xs text-white/40">{s.duration}</p></div></div></td>
-                                                        <td className="py-4 px-4"><span className="flex items-center gap-1 text-sm text-white/70"><CatIcon className="w-4 h-4" />{individualServicesService.getCategories().find(c => c.id === s.category)?.label}</span></td>
+                                                    <tr key={s._id || s.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                                        <td className="py-4 px-4"><div className="flex items-center gap-3"><img src={s.images && s.images.length > 0 ? s.images[0] : 'https://images.unsplash.com/photo-1568322445389-f64ac2515020?w=100'} alt={s.name} className="w-12 h-12 rounded-lg object-cover" /><div><p className="font-semibold text-white text-sm">{s.name}</p></div></div></td>
+                                                        <td className="py-4 px-4"><span className="flex items-center gap-1 text-sm text-white/70"><CatIcon className="w-4 h-4" />{individualServicesService.getCategories().find(c => c.id === s.serviceType)?.label || s.serviceType}</span></td>
                                                         <td className="py-4 px-4 text-white/80">${s.price}</td>
-                                                        <td className="py-4 px-4">{statusBadge(s.status)}</td>
-                                                        <td className="py-4 px-4"><div className="flex items-center justify-end gap-2"><button onClick={() => openEditSvc(s)} className="p-2 hover:bg-primary-500/10 rounded-lg transition-colors"><Edit2 className="w-4 h-4 text-primary-400" /></button><button onClick={() => setDeleteConfirm(`svc-del-${s.id}`)} className="p-2 hover:bg-red-500/10 rounded-lg transition-colors"><Trash2 className="w-4 h-4 text-red-400" /></button></div></td>
+                                                        <td className="py-4 px-4"><div className="flex items-center justify-end gap-2"><button onClick={() => openEditSvc(s)} className="p-2 hover:bg-primary-500/10 rounded-lg transition-colors"><Edit2 className="w-4 h-4 text-primary-400" /></button><button onClick={() => setDeleteConfirm(`svc-del-${s._id || s.id}`)} className="p-2 hover:bg-red-500/10 rounded-lg transition-colors"><Trash2 className="w-4 h-4 text-red-400" /></button></div></td>
                                                     </tr>
                                                 );
                                             })}
                                         </tbody>
                                     </table>
-                                    {filteredServices.length === 0 && <div className="text-center py-12"><Car className="w-12 h-12 text-white/10 mx-auto mb-3" /><p className="text-white/40">{svcFilter === 'all' ? 'No services yet.' : `No ${svcFilter} services.`}</p></div>}
+                                    {filteredServices.length === 0 && <div className="text-center py-12"><Car className="w-12 h-12 text-white/10 mx-auto mb-3" /><p className="text-white/40">No services yet.</p></div>}
                                 </div>
                             </Card>
                         </>
@@ -382,21 +398,46 @@ const VendorDashboard = () => {
                                             {individualServicesService.getCategories().map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
                                         </select>
                                     </div>
-                                    <Input label="Image URL" value={svcFormData.image} onChange={(e) => setSvcFormData({ ...svcFormData, image: e.target.value })} icon={Image} required />
-                                </div>
-                                <div className="grid grid-cols-3 gap-4">
-                                    <Input label="Duration" value={svcFormData.duration} onChange={(e) => setSvcFormData({ ...svcFormData, duration: e.target.value })} placeholder="e.g. 4 hours" required />
                                     <Input label="Price ($)" type="number" value={svcFormData.price} onChange={(e) => setSvcFormData({ ...svcFormData, price: e.target.value })} required />
-                                    <Input label="Capacity" value={svcFormData.capacity} onChange={(e) => setSvcFormData({ ...svcFormData, capacity: e.target.value })} placeholder="e.g. 4 passengers" required />
                                 </div>
-                                <Input label="Location" value={svcFormData.location} onChange={(e) => setSvcFormData({ ...svcFormData, location: e.target.value })} placeholder="e.g. West Bank, Luxor" required />
+
+                                {svcFormData.category === 'Rental' && (
+                                    <div className="grid grid-cols-3 gap-4">
+                                        <Input label="Vehicle Type" value={svcFormData.vehicleType} onChange={(e) => setSvcFormData({ ...svcFormData, vehicleType: e.target.value })} placeholder="e.g. Sedan" required />
+                                        <Input label="Capacity" type="number" value={svcFormData.capacity} onChange={(e) => setSvcFormData({ ...svcFormData, capacity: e.target.value })} placeholder="e.g. 4" required />
+                                        <Input label="Conditions" value={svcFormData.conditions} onChange={(e) => setSvcFormData({ ...svcFormData, conditions: e.target.value })} placeholder="e.g. With Driver" required />
+                                    </div>
+                                )}
+                                {svcFormData.category === 'Restaurant' && (
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <Input label="Cuisine Type" value={svcFormData.cuisineType} onChange={(e) => setSvcFormData({ ...svcFormData, cuisineType: e.target.value })} placeholder="e.g. Egyptian" required />
+                                        <Input label="Table Capacity" type="number" value={svcFormData.tableCapacity} onChange={(e) => setSvcFormData({ ...svcFormData, tableCapacity: e.target.value })} placeholder="e.g. 50" required />
+                                    </div>
+                                )}
+
+                                <div>
+                                    <label className="block text-sm font-medium mb-2 text-white/80">Upload Images <span className="text-white/30 font-normal">(max 10MB each)</span></label>
+                                    <input type="file" multiple accept="image/*" onChange={(e) => {
+                                        const files = Array.from(e.target.files);
+                                        const oversized = files.find(f => f.size > 10 * 1024 * 1024);
+                                        if (oversized) {
+                                            setAlert({ type: 'error', message: `"${oversized.name}" exceeds the 10MB limit. Please choose a smaller image.` });
+                                            e.target.value = '';
+                                            return;
+                                        }
+                                        setSvcFormData({ ...svcFormData, imageFile: e.target.files });
+                                    }} className="w-full px-4 py-3 bg-dark-700/50 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all duration-300" />
+                                </div>
                                 <div>
                                     <label className="block text-sm font-medium mb-2 text-white/80">Description</label>
                                     <textarea value={svcFormData.description} onChange={(e) => setSvcFormData({ ...svcFormData, description: e.target.value })} rows={3} className="w-full px-4 py-3 bg-dark-700/50 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all duration-300" required />
                                 </div>
                                 <div className="flex gap-3 pt-4">
-                                    <Button type="submit" variant="primary" className="flex items-center gap-2"><Save className="w-4 h-4" />{editingSvcId ? 'Update' : 'Submit for Approval'}</Button>
-                                    <Button type="button" variant="ghost" onClick={closeSvcForm}>Cancel</Button>
+                                    <Button type="submit" variant="primary" disabled={submitting} className="flex items-center gap-2">
+                                        {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                        {submitting ? 'Saving...' : editingSvcId ? 'Update' : 'Save'}
+                                    </Button>
+                                    <Button type="button" variant="ghost" onClick={closeSvcForm} disabled={submitting}>Cancel</Button>
                                 </div>
                             </form>
                         </Card>

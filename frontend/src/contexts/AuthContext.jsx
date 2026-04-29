@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import authService from '../services/authService';
+import userService from '../services/userService';
 
 const AuthContext = createContext();
 
@@ -16,12 +17,14 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Check for existing session
-        const currentUser = authService.getCurrentUser();
-        if (currentUser) {
-            setUser(currentUser);
-        }
-        setLoading(false);
+        const fetchUser = async () => {
+            const currentUser = await authService.getCurrentUser();
+            if (currentUser) {
+                setUser(currentUser);
+            }
+            setLoading(false);
+        };
+        fetchUser();
     }, []);
 
     const login = async (email, password) => {
@@ -40,13 +43,13 @@ export const AuthProvider = ({ children }) => {
         return result;
     };
 
-    const logout = () => {
-        authService.logout();
+    const logout = async () => {
+        await authService.logout();
         setUser(null);
     };
 
     const updateProfile = async (updates) => {
-        const result = await authService.updateProfile(updates);
+        const result = await userService.updateProfile(updates);
         if (result.success) {
             setUser(result.user);
         }
@@ -54,20 +57,29 @@ export const AuthProvider = ({ children }) => {
     };
 
     const changePassword = async (currentPassword, newPassword) => {
-        return await authService.changePassword(currentPassword, newPassword);
+        return await userService.changePassword(currentPassword, newPassword);
+    };
+
+    const deleteAccount = async (password) => {
+        const result = await userService.deleteAccount(password);
+        if (result.success) {
+            logout();
+        }
+        return result;
     };
 
     const value = {
         user,
         loading,
         isAuthenticated: !!user,
-        isAdmin: user?.role === 'admin',
-        isVendor: user?.role === 'vendor',
+        isAdmin: user?.role === 'admin' || user?.role === 'Admin',
+        isVendor: user?.role === 'vendor' || user?.role === 'LocalBusinessOwner',
         login,
         register,
         logout,
         updateProfile,
         changePassword,
+        deleteAccount,
     };
 
     if (loading) {

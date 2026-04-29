@@ -18,6 +18,7 @@ const Signup = () => {
         terms: false,
         role: 'user',
         companyName: '',
+        licenseNumber: '',
     });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -67,7 +68,11 @@ const Signup = () => {
         const result = await register(formData);
 
         if (result.success) {
-            navigate('/');
+            if (formData.role === 'vendor') {
+                navigate('/vendor/dashboard');
+            } else {
+                navigate('/');
+            }
         } else {
             setError(result.error);
             setLoading(false);
@@ -176,15 +181,26 @@ const Signup = () => {
                     />
 
                     {formData.role === 'vendor' && (
-                        <Input
-                            label="Company Name"
-                            name="companyName"
-                            placeholder="Your tourism company name"
-                            value={formData.companyName}
-                            onChange={handleChange}
-                            icon={Building2}
-                            required
-                        />
+                        <>
+                            <Input
+                                label="Company Name"
+                                name="companyName"
+                                placeholder="Your tourism company name"
+                                value={formData.companyName}
+                                onChange={handleChange}
+                                icon={Building2}
+                                required
+                            />
+                            <Input
+                                label="License Number"
+                                name="licenseNumber"
+                                placeholder="Tourism license number"
+                                value={formData.licenseNumber}
+                                onChange={handleChange}
+                                icon={Building2}
+                                required
+                            />
+                        </>
                     )}
 
                     <Input

@@ -28,7 +28,8 @@ export const updateUserProfile = async (req, res) => {
     }
 
     // 1. Update Base User Fields (Allowed for all roles)
-    if (req.body.name) user.name = req.body.name;
+    if (req.body.firstName) user.firstName = req.body.firstName;
+    if (req.body.lastName) user.lastName = req.body.lastName;
     if (req.body.phone) user.phone = req.body.phone;
     
     // 2. Update Role-Specific Fields

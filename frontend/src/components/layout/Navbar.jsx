@@ -28,14 +28,26 @@ const Navbar = () => {
         navigate('/');
     };
 
-    const navLinks = [
-        { path: '/', label: 'Home' },
-        { path: '/tours', label: 'Tour Programs' },
-        { path: '/services', label: 'Services' },
-        { path: '/attractions', label: 'Attractions' },
-        { path: '/about', label: 'About' },
-        { path: '/contact', label: 'Contact' },
-    ];
+    const getNavLinks = () => {
+        if (user?.role === 'LocalBusinessOwner') {
+            return [
+                { path: '/', label: 'Home' },
+                { path: '/vendor/dashboard', label: 'Dashboard' },
+                { path: '/about', label: 'About' },
+                { path: '/contact', label: 'Contact' },
+            ];
+        }
+
+        return [
+            { path: '/', label: 'Home' },
+            { path: '/services', label: 'Services' },
+            { path: '/attractions', label: 'Attractions' },
+            { path: '/about', label: 'About' },
+            { path: '/contact', label: 'Contact' },
+        ];
+    };
+
+    const currentNavLinks = getNavLinks();
 
     const isActive = (path) => {
         if (path === '/') return location.pathname === '/';
@@ -44,8 +56,8 @@ const Navbar = () => {
 
     return (
         <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScrolled
-                ? 'bg-dark-900/95 backdrop-blur-xl shadow-[0_4px_30px_rgba(0,0,0,0.4)] border-b border-white/5'
-                : 'bg-transparent'
+            ? 'bg-dark-900/95 backdrop-blur-xl shadow-[0_4px_30px_rgba(0,0,0,0.4)] border-b border-white/5'
+            : 'bg-transparent'
             }`}>
             <div className="container-custom">
                 <div className="flex items-center justify-between h-20">
@@ -61,13 +73,13 @@ const Navbar = () => {
 
                     {/* Desktop Navigation */}
                     <nav className="hidden md:flex items-center gap-1">
-                        {navLinks.map((link) => (
+                        {currentNavLinks.map((link) => (
                             <Link
                                 key={link.path}
                                 to={link.path}
                                 className={`relative px-4 py-2 rounded-lg font-medium transition-all duration-300 ${isActive(link.path)
-                                        ? 'text-primary-400'
-                                        : 'text-white/70 hover:text-white hover:bg-white/5'
+                                    ? 'text-primary-400'
+                                    : 'text-white/70 hover:text-white hover:bg-white/5'
                                     }`}
                             >
                                 {link.label}
@@ -90,7 +102,7 @@ const Navbar = () => {
                                         {user?.firstName?.[0]}{user?.lastName?.[0]}
                                     </div>
                                     <span className="font-medium text-white/80 group-hover:text-white transition-colors">
-                                        {user?.firstName}
+                                        {user?.role === 'LocalBusinessOwner' ? user?.companyName : user?.firstName}
                                     </span>
                                 </button>
 
@@ -110,23 +122,27 @@ const Navbar = () => {
                                                 <User className="w-4 h-4 text-primary-400" />
                                                 <span className="text-white/80">My Profile</span>
                                             </Link>
-                                            <Link
-                                                to="/my-bookings"
-                                                className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors"
-                                                onClick={() => setIsUserMenuOpen(false)}
-                                            >
-                                                <Calendar className="w-4 h-4 text-primary-400" />
-                                                <span className="text-white/80">My Bookings</span>
-                                            </Link>
-                                            <Link
-                                                to="/trip-planner"
-                                                className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors"
-                                                onClick={() => setIsUserMenuOpen(false)}
-                                            >
-                                                <MapPin className="w-4 h-4 text-primary-400" />
-                                                <span className="text-white/80">My Trips</span>
-                                            </Link>
-                                            {user?.role === 'vendor' && (
+                                            {user?.role === 'Tourist' && (
+                                                <>
+                                                    <Link
+                                                        to="/my-bookings"
+                                                        className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors"
+                                                        onClick={() => setIsUserMenuOpen(false)}
+                                                    >
+                                                        <Calendar className="w-4 h-4 text-primary-400" />
+                                                        <span className="text-white/80">My Bookings</span>
+                                                    </Link>
+                                                    <Link
+                                                        to="/trip-planner"
+                                                        className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors"
+                                                        onClick={() => setIsUserMenuOpen(false)}
+                                                    >
+                                                        <MapPin className="w-4 h-4 text-primary-400" />
+                                                        <span className="text-white/80">My Trips</span>
+                                                    </Link>
+                                                </>
+                                            )}
+                                            {user?.role === 'LocalBusinessOwner' && (
                                                 <>
                                                     <hr className="my-2 border-white/10" />
                                                     <div className="px-4 py-1">
@@ -142,7 +158,7 @@ const Navbar = () => {
                                                     </Link>
                                                 </>
                                             )}
-                                            {user?.role === 'admin' && (
+                                            {user?.role === 'Admin' && (
                                                 <>
                                                     <hr className="my-2 border-white/10" />
                                                     <div className="px-4 py-1">
@@ -237,14 +253,14 @@ const Navbar = () => {
                 {isMenuOpen && (
                     <div className="md:hidden py-4 border-t border-white/10 animate-slide-down bg-dark-900/95 backdrop-blur-xl">
                         <div className="flex flex-col gap-1">
-                            {navLinks.map((link) => (
+                            {currentNavLinks.map((link) => (
                                 <Link
                                     key={link.path}
                                     to={link.path}
                                     onClick={() => setIsMenuOpen(false)}
                                     className={`px-4 py-3 rounded-xl transition-all duration-300 font-medium ${isActive(link.path)
-                                            ? 'bg-primary-500/10 text-primary-400 border-l-2 border-primary-500'
-                                            : 'text-white/70 hover:bg-white/5 hover:text-white'
+                                        ? 'bg-primary-500/10 text-primary-400 border-l-2 border-primary-500'
+                                        : 'text-white/70 hover:bg-white/5 hover:text-white'
                                         }`}
                                 >
                                     {link.label}
@@ -263,23 +279,27 @@ const Navbar = () => {
                                         <User className="w-5 h-5 text-primary-400" />
                                         My Profile
                                     </Link>
-                                    <Link
-                                        to="/my-bookings"
-                                        onClick={() => setIsMenuOpen(false)}
-                                        className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/5 hover:text-white transition-colors"
-                                    >
-                                        <Calendar className="w-5 h-5 text-primary-400" />
-                                        My Bookings
-                                    </Link>
-                                    <Link
-                                        to="/trip-planner"
-                                        onClick={() => setIsMenuOpen(false)}
-                                        className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/5 hover:text-white transition-colors"
-                                    >
-                                        <MapPin className="w-5 h-5 text-primary-400" />
-                                        My Trips
-                                    </Link>
-                                    {user?.role === 'vendor' && (
+                                    {user?.role === 'Tourist' && (
+                                        <>
+                                            <Link
+                                                to="/my-bookings"
+                                                onClick={() => setIsMenuOpen(false)}
+                                                className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/5 hover:text-white transition-colors"
+                                            >
+                                                <Calendar className="w-5 h-5 text-primary-400" />
+                                                My Bookings
+                                            </Link>
+                                            <Link
+                                                to="/trip-planner"
+                                                onClick={() => setIsMenuOpen(false)}
+                                                className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/5 hover:text-white transition-colors"
+                                            >
+                                                <MapPin className="w-5 h-5 text-primary-400" />
+                                                My Trips
+                                            </Link>
+                                        </>
+                                    )}
+                                    {user?.role === 'LocalBusinessOwner' && (
                                         <>
                                             <hr className="my-3 border-white/10" />
                                             <div className="px-4 py-1">
@@ -295,7 +315,7 @@ const Navbar = () => {
                                             </Link>
                                         </>
                                     )}
-                                    {user?.role === 'admin' && (
+                                    {user?.role === 'Admin' && (
                                         <>
                                             <hr className="my-3 border-white/10" />
                                             <div className="px-4 py-1">

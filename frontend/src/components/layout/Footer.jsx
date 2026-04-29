@@ -7,7 +7,8 @@ const Footer = () => {
 
     const quickLinks = [
         { path: '/', label: 'Home' },
-        { path: '/tours', label: 'Tour Programs' },
+        { path: '/services', label: 'Services' },
+        { path: '/attractions', label: 'Attractions' },
         { path: '/about', label: 'About' },
         { path: '/contact', label: 'Contact' },
     ];

@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { Search, Star, Users, TrendingUp, Shield, Award, HeartHandshake, Sparkles, MapPin, Landmark, Car, Bike, UtensilsCrossed } from 'lucide-react';
-import { tourPrograms } from '../data/tourPrograms';
+import { Search, Star, Users, TrendingUp, Shield, Award, HeartHandshake, Sparkles, MapPin, Landmark, Car, UtensilsCrossed } from 'lucide-react';
+
 import attractionsService from '../services/attractionsService';
 import individualServicesService from '../services/individualServicesService';
 import Card from '../components/common/Card';
@@ -15,6 +15,7 @@ gsap.registerPlugin(ScrollTrigger);
 const Home = () => {
     const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
+    const [popularServices, setPopularServices] = useState([]);
 
     // Refs for GSAP animation
     const heroRef = useRef(null);
@@ -24,23 +25,27 @@ const Home = () => {
     const featuresRef = useRef(null);
     const ctaRef = useRef(null);
 
-    const featuredPrograms = tourPrograms.slice(0, 3);
     const topAttractions = attractionsService.getAll().slice(0, 3);
-    const popularServices = individualServicesService.getApproved()
-        .sort((a, b) => b.rating - a.rating || b.reviews - a.reviews)
-        .slice(0, 3);
+
+    useEffect(() => {
+        individualServicesService.getApproved().then((services) => {
+            const sorted = services
+                .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0) || (b.reviews ?? 0) - (a.reviews ?? 0))
+                .slice(0, 3);
+            setPopularServices(sorted);
+        });
+    }, []);
 
     const categoryIcons = {
-        car_rental: Car,
-        bicycle_rental: Bike,
-        restaurant: UtensilsCrossed,
-        temple_visit: Landmark
+        Rental: Car,
+        Restaurant: UtensilsCrossed,
+        TourPackage: Landmark,
     };
 
     const handleSearch = (e) => {
         e.preventDefault();
         if (searchQuery.trim()) {
-            navigate(`/tours?search=${encodeURIComponent(searchQuery)}`);
+            navigate(`/services?search=${encodeURIComponent(searchQuery)}`);
         }
     };
 
@@ -174,35 +179,40 @@ const Home = () => {
             );
 
             // View all button animation
-            gsap.fromTo(cardsRef.current.querySelector('.view-all-button'),
-                { opacity: 0, y: 30 },
-                {
-                    opacity: 1,
-                    y: 0,
-                    duration: 0.6,
-                    ease: 'back.out(1.7)',
-                    scrollTrigger: {
-                        trigger: cardsRef.current.querySelector('.view-all-button'),
-                        start: 'top 85%',
-                        once: true
+            const viewAllBtn = cardsRef.current?.querySelector('.view-all-button');
+            if (viewAllBtn) {
+                gsap.fromTo(viewAllBtn,
+                    { opacity: 0, y: 30 },
+                    {
+                        opacity: 1,
+                        y: 0,
+                        duration: 0.6,
+                        ease: 'back.out(1.7)',
+                        scrollTrigger: {
+                            trigger: viewAllBtn,
+                            start: 'top 85%',
+                            once: true
+                        }
                     }
-                }
-            );
+                );
+            }
 
-            // CTA Section Animation
-            gsap.fromTo(ctaRef.current.querySelector('.cta-content'),
-                { opacity: 0, scale: 0.9 },
-                {
-                    opacity: 1,
-                    scale: 1,
-                    duration: 0.8,
-                    ease: 'power2.out',
-                    scrollTrigger: {
-                        trigger: ctaRef.current,
-                        start: 'top 70%',
+            // CTA Section Animation — .cta-content IS ctaRef.current itself, target it directly
+            if (ctaRef.current) {
+                gsap.fromTo(ctaRef.current,
+                    { opacity: 0, scale: 0.9 },
+                    {
+                        opacity: 1,
+                        scale: 1,
+                        duration: 0.8,
+                        ease: 'power2.out',
+                        scrollTrigger: {
+                            trigger: ctaRef.current,
+                            start: 'top 70%',
+                        }
                     }
-                }
-            );
+                );
+            }
 
             // Parallax effect on hero gradient orbs
             gsap.to('.parallax-orb', {
@@ -307,8 +317,8 @@ const Home = () => {
 
                     <div className="flex flex-col sm:flex-row gap-4 justify-center">
                         <span className="hero-button">
-                            <Button variant="primary" size="lg" onClick={() => navigate('/tours')}>
-                                Browse Tour Programs →
+                            <Button variant="primary" size="lg" onClick={() => navigate('/services')}>
+                                Browse Services →
                             </Button>
                         </span>
                         <span className="hero-button">
@@ -349,66 +359,44 @@ const Home = () => {
                 </div>
             </section>
 
-            {/* Featured Programs */}
+            {/* Featured Services CTA */}
             <section ref={cardsRef} className="section-padding relative">
                 <div className="container-custom">
-                    <div className="text-center mb-16">
+                    <div className="text-center mb-12">
                         <h2 className="text-4xl md:text-5xl font-display font-bold mb-4 text-white">
-                            Featured <span className="bg-gradient-to-r from-primary-400 to-secondary-500 bg-clip-text text-transparent">Tour Programs</span>
+                            Explore <span className="bg-gradient-to-r from-primary-400 to-secondary-500 bg-clip-text text-transparent">Services</span>
                         </h2>
-                        <p className="text-xl text-white/50 max-w-2xl mx-auto mb-6">
-                            Handpicked tours from top-rated tourism companies
+                        <p className="text-xl text-white/50 max-w-2xl mx-auto mb-8">
+                            Rentals, restaurants, and tour packages — filter and build your perfect custom trip
                         </p>
-                        <DiscountBadge discount="UP TO 20" size="lg" />
                     </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                        {featuredPrograms.map((program) => (
-                            <div key={program.id} className="tour-card h-full">
-                                <Card
-                                    hover
-                                    padding={false}
-                                    onClick={() => navigate(`/tours/${program.id}`)}
-                                    className="cursor-pointer h-full flex flex-col"
-                                >
-                                    <div className="relative h-56 overflow-hidden">
-                                        <img
-                                            src={program.image}
-                                            alt={program.name}
-                                            className="w-full h-full object-cover transform transition-transform duration-700 hover:scale-110"
-                                        />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-dark-900 via-transparent to-transparent" />
-                                        <div className="absolute top-4 right-4">
-                                            <DiscountBadge discount={program.discount} />
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                        {[{ icon: Car, title: 'Vehicle Rentals', desc: 'Cars, bikes, and more for your journey', type: 'Rental', color: 'blue' },
+                          { icon: UtensilsCrossed, title: 'Restaurants', desc: 'Authentic local dining experiences', type: 'Restaurant', color: 'orange' },
+                          { icon: Landmark, title: 'Tour Packages', desc: 'Guided tours of ancient Luxor sites', type: 'TourPackage', color: 'purple' }
+                        ].map(item => {
+                            const Icon = item.icon;
+                            const colors = { blue: 'from-blue-500/20 to-blue-600/20 border-blue-500/20 text-blue-400', orange: 'from-orange-500/20 to-orange-600/20 border-orange-500/20 text-orange-400', purple: 'from-purple-500/20 to-purple-600/20 border-purple-500/20 text-purple-400' };
+                            return (
+                                <div key={item.type} className="tour-card">
+                                    <Card
+                                        hover
+                                        className={`cursor-pointer text-center bg-gradient-to-br ${colors[item.color]} border`}
+                                        onClick={() => navigate(`/services?type=${item.type}`)}
+                                    >
+                                        <div className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br ${colors[item.color]} mb-4 mx-auto`}>
+                                            <Icon className="w-8 h-8" />
                                         </div>
-                                    </div>
-                                    <div className="p-6 flex-1 flex flex-col">
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <Users className="w-4 h-4 text-white/40" />
-                                            <span className="text-sm text-white/50">{program.company}</span>
-                                            <Star className="w-4 h-4 fill-primary-400 text-primary-400 ml-auto" />
-                                            <span className="text-sm font-semibold text-white/80">{program.companyRating}</span>
-                                        </div>
-                                        <h3 className="text-xl font-bold text-white mb-2">{program.name}</h3>
-                                        <p className="text-white/50 mb-4 line-clamp-2 flex-1">{program.description}</p>
-                                        <div className="flex items-center justify-between pt-4 border-t border-white/10">
-                                            <div>
-                                                <div className="text-sm text-white/40 line-through">${program.originalPrice}</div>
-                                                <div className="text-2xl font-bold text-primary-400">${program.price}</div>
-                                            </div>
-                                            <span className="text-sm text-green-400 font-semibold bg-green-400/10 px-3 py-1 rounded-full">
-                                                Save ${program.originalPrice - program.price}!
-                                            </span>
-                                        </div>
-                                    </div>
-                                </Card>
-                            </div>
-                        ))}
+                                        <h3 className="text-xl font-bold text-white mb-2">{item.title}</h3>
+                                        <p className="text-white/50 text-sm">{item.desc}</p>
+                                    </Card>
+                                </div>
+                            );
+                        })}
                     </div>
-
-                    <div className="text-center mt-12 view-all-button">
-                        <Button variant="primary" size="lg" onClick={() => navigate('/tours')}>
-                            View All Tour Programs
+                    <div className="text-center view-all-button">
+                        <Button variant="primary" size="lg" onClick={() => navigate('/services')}>
+                            Browse All Services
                         </Button>
                     </div>
                 </div>
@@ -428,13 +416,13 @@ const Home = () => {
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                             {popularServices.map((service) => {
-                                const Icon = categoryIcons[service.category] || Landmark;
+                                const Icon = categoryIcons[service.serviceType] || Landmark;
                                 return (
-                                    <div key={service.id} className="service-card h-full">
+                                    <div key={service._id || service.id} className="service-card h-full">
                                         <Card hover padding={false} onClick={() => navigate('/services')} className="cursor-pointer h-full flex flex-col">
                                             <div className="relative h-56 overflow-hidden">
                                                 <img
-                                                    src={service.image}
+                                                    src={service.images?.[0] || service.image}
                                                     alt={service.name}
                                                     className="w-full h-full object-cover transform transition-transform duration-700 hover:scale-110"
                                                     onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1568322445389-f64ac2515020?w=600'; }}
@@ -443,7 +431,7 @@ const Home = () => {
                                                 <div className="absolute top-4 right-4">
                                                     <span className="inline-flex items-center gap-1 px-3 py-1 bg-dark-700/80 backdrop-blur-sm border border-white/10 rounded-full text-sm font-medium text-blue-400">
                                                         <Icon className="w-3 h-3" />
-                                                        {service.category.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                                        {(service.serviceType ?? '').replace('_', ' ')}
                                                     </span>
                                                 </div>
                                                 <div className="absolute bottom-4 left-4">
@@ -573,7 +561,7 @@ const Home = () => {
                     <Button
                         variant="primary"
                         size="lg"
-                        onClick={() => navigate('/tours')}
+                        onClick={() => navigate('/services')}
                         className="shadow-[0_0_40px_rgba(242,133,109,0.4)]"
                     >
                         Browse Tour Programs →

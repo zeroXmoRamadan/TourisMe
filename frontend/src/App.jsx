@@ -10,11 +10,11 @@ import Footer from './components/layout/Footer';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import AdminRoute from './components/auth/AdminRoute';
 import VendorRoute from './components/auth/VendorRoute';
+import TouristOrGuestRoute from './components/auth/TouristOrGuestRoute';
+import TouristOnlyRoute from './components/auth/TouristOnlyRoute';
 
 // Pages
 import Home from './pages/Home';
-import Tours from './pages/Tours';
-import TourDetail from './pages/TourDetail';
 import Booking from './pages/Booking';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -99,13 +99,23 @@ function App() {
                                         <main className="flex-grow">
                                             <Routes>
                                                 <Route path="/" element={<Home />} />
-                                                <Route path="/tours" element={<Tours />} />
-                                                <Route path="/tours/:id" element={<TourDetail />} />
-                                                <Route path="/attractions" element={<Attractions />} />
-                                                <Route path="/attractions/:id" element={<AttractionDetail />} />
+                                                <Route path="/attractions" element={
+                                                    <TouristOrGuestRoute>
+                                                        <Attractions />
+                                                    </TouristOrGuestRoute>
+                                                } />
+                                                <Route path="/attractions/:id" element={
+                                                    <TouristOrGuestRoute>
+                                                        <AttractionDetail />
+                                                    </TouristOrGuestRoute>
+                                                } />
+                                                <Route path="/services" element={
+                                                    <TouristOrGuestRoute>
+                                                        <Services />
+                                                    </TouristOrGuestRoute>
+                                                } />
                                                 <Route path="/about" element={<About />} />
                                                 <Route path="/contact" element={<Contact />} />
-                                                <Route path="/services" element={<Services />} />
 
                                                 {/* Protected routes */}
                                                 <Route path="/profile" element={
@@ -114,19 +124,19 @@ function App() {
                                                     </ProtectedRoute>
                                                 } />
                                                 <Route path="/my-bookings" element={
-                                                    <ProtectedRoute>
+                                                    <TouristOnlyRoute>
                                                         <MyBookings />
-                                                    </ProtectedRoute>
+                                                    </TouristOnlyRoute>
                                                 } />
                                                 <Route path="/booking/:id" element={
-                                                    <ProtectedRoute>
+                                                    <TouristOnlyRoute>
                                                         <Booking />
-                                                    </ProtectedRoute>
+                                                    </TouristOnlyRoute>
                                                 } />
                                                 <Route path="/trip-planner" element={
-                                                    <ProtectedRoute>
+                                                    <TouristOnlyRoute>
                                                         <TripPlanner />
-                                                    </ProtectedRoute>
+                                                    </TouristOnlyRoute>
                                                 } />
 
                                                 {/* Vendor routes */}

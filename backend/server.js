@@ -1,8 +1,8 @@
+import './env.js'; // Must be first — loads .env before any other module reads process.env
 import express from 'express';
 import mongoose from 'mongoose';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/user.routes.js';
 import attractionRoutes from './routes/attraction.routes.js';
@@ -13,8 +13,6 @@ import reviewRoutes from './routes/review.routes.js';
 import adsRoutes from './routes/ads.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
 import tripPlanRoutes from './routes/tripPlan.routes.js';
-
-dotenv.config();
 
 const app = express();
 

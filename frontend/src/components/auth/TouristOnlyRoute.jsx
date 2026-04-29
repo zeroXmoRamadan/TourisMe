@@ -2,7 +2,7 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
-const VendorRoute = ({ children }) => {
+const TouristOnlyRoute = ({ children }) => {
     const { user, isAuthenticated } = useAuth();
     const location = useLocation();
 
@@ -10,11 +10,11 @@ const VendorRoute = ({ children }) => {
         return <Navigate to="/login" state={{ from: location.pathname }} replace />;
     }
 
-    if (user?.role !== 'LocalBusinessOwner' && user?.role !== 'Admin') {
+    if (user?.role !== 'Tourist') {
         return <Navigate to="/" replace />;
     }
 
     return children;
 };
 
-export default VendorRoute;
+export default TouristOnlyRoute;

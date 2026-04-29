@@ -18,8 +18,12 @@ const sendTokenResponse = (user, statusCode, res, message) => {
     sameSite: 'strict', // Protects against Cross-Site Request Forgery (CSRF)
   };
 
-  const userData = { id: user._id, name: user.name, email: user.email, role: user.role };
-  if (user.role === 'LocalBusinessOwner') userData.companyName = user.companyName;
+  const userData = { id: user._id, firstName: user.firstName, lastName: user.lastName, email: user.email, phone: user.phone, role: user.role };
+  if (user.role === 'LocalBusinessOwner') {
+    userData.companyName = user.companyName;
+    userData.licenseNumber = user.licenseNumber;
+    userData.description = user.description;
+  }
 
   res
     .status(statusCode)
@@ -30,9 +34,9 @@ const sendTokenResponse = (user, statusCode, res, message) => {
 // --- Tourist Signup ---
 export const registerTourist = async (req, res) => {
   try {
-    const { name, email, phone, password } = req.body; 
+    const { firstName, lastName, email, phone, password } = req.body; 
 
-    if (!name || !email || !phone || !password) {
+    if (!firstName || !lastName || !email || !phone || !password) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
@@ -49,7 +53,8 @@ export const registerTourist = async (req, res) => {
     const passwordHash = await bcrypt.hash(password, salt);
 
     const newTourist = await Tourist.create({
-      name,
+      firstName,
+      lastName,
       email,
       phone,
       passwordHash,
@@ -68,9 +73,9 @@ export const registerTourist = async (req, res) => {
 // --- Local Business Owner Signup ---
 export const registerOwner = async (req, res) => {
   try {
-    const { name, email, phone, password, companyName, licenseNumber } = req.body;
+    const { firstName, lastName, email, phone, password, companyName, licenseNumber } = req.body;
 
-    if (!name || !email || !phone || !password || !companyName || !licenseNumber) {
+    if (!firstName || !lastName || !email || !phone || !password || !companyName || !licenseNumber) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
@@ -87,7 +92,8 @@ export const registerOwner = async (req, res) => {
     const passwordHash = await bcrypt.hash(password, salt);
 
     const newOwner = await LocalBusinessOwner.create({
-      name,
+      firstName,
+      lastName,
       email,
       phone,
       passwordHash,
@@ -147,13 +153,17 @@ export const getProfile = async (req, res) => {
     // req.user is set by the protect middleware
     const userData = {
       id: req.user._id,
-      name: req.user.name,
+      firstName: req.user.firstName,
+      lastName: req.user.lastName,
       email: req.user.email,
+      phone: req.user.phone,
       role: req.user.role,
     };
 
     if (req.user.role === 'LocalBusinessOwner') {
       userData.companyName = req.user.companyName;
+      userData.licenseNumber = req.user.licenseNumber;
+      userData.description = req.user.description;
     }
 
     res.status(200).json({ user: userData });

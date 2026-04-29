@@ -43,9 +43,9 @@ const Login = () => {
         const result = await login(email, password);
 
         if (result.success) {
-            if (result.user?.role === 'vendor') {
+            if (result.user?.role === 'LocalBusinessOwner') {
                 navigate('/vendor/dashboard', { replace: true });
-            } else if (result.user?.role === 'admin') {
+            } else if (result.user?.role === 'Admin') {
                 navigate('/admin/users', { replace: true });
             } else {
                 navigate(from, { replace: true });
