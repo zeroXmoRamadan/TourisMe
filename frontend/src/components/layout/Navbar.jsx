@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, User, LogOut, Calendar, Plane, Landmark, Shield, Store, Package, Users, Car, MapPin } from 'lucide-react';
+import { Menu, X, User, LogOut, Calendar, Plane, Landmark, Shield, Store, Package, Users, Car, MapPin, CalendarDays } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import Button from '../common/Button';
 
@@ -33,6 +33,7 @@ const Navbar = () => {
             return [
                 { path: '/', label: 'Home' },
                 { path: '/vendor/dashboard', label: 'Dashboard' },
+                { path: '/vendor/bookings', label: 'Booking Requests' },
                 { path: '/about', label: 'About' },
                 { path: '/contact', label: 'Contact' },
             ];
@@ -155,6 +156,14 @@ const Navbar = () => {
                                                     >
                                                         <Package className="w-4 h-4 text-blue-400" />
                                                         <span className="text-white/80">My Dashboard</span>
+                                                    </Link>
+                                                    <Link
+                                                        to="/vendor/bookings"
+                                                        className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors"
+                                                        onClick={() => setIsUserMenuOpen(false)}
+                                                    >
+                                                        <CalendarDays className="w-4 h-4 text-primary-400" />
+                                                        <span className="text-white/80">Booking Requests</span>
                                                     </Link>
                                                 </>
                                             )}
@@ -312,6 +321,14 @@ const Navbar = () => {
                                             >
                                                 <Package className="w-5 h-5 text-blue-400" />
                                                 My Dashboard
+                                            </Link>
+                                            <Link
+                                                to="/vendor/bookings"
+                                                onClick={() => setIsMenuOpen(false)}
+                                                className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/5 hover:text-white transition-colors"
+                                            >
+                                                <CalendarDays className="w-5 h-5 text-primary-400" />
+                                                Booking Requests
                                             </Link>
                                         </>
                                     )}

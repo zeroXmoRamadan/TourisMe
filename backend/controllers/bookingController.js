@@ -1,6 +1,7 @@
 import Booking from '../models/booking.model.js';
 import { Service } from '../models/service.model.js';
-import { notificationTemplates , createNotification} from '../utils/notificationHelper.js';
+import User from '../models/user.model.js';
+import { notificationTemplates, createNotification } from '../utils/notificationHelper.js';
 
 
 // @desc    Create a new booking
@@ -12,8 +13,8 @@ export const createBooking = async (req, res) => {
 
     // Validation
     if (!serviceId || !serviceDate) {
-      return res.status(400).json({ 
-        message: 'Service ID and service date are required' 
+      return res.status(400).json({
+        message: 'Service ID and service date are required'
       });
     }
 
@@ -47,36 +48,41 @@ export const createBooking = async (req, res) => {
     // Populate service details for response
     await booking.populate('serviceId', 'name serviceType price images');
 
-     //  Notify business owner about new booking
-    const owner = await User.findById(service.ownerId);
-    
-    await createNotification({
-      userId: owner._id,
-      type: 'booking_confirmed',
-      title: 'New Booking Received',
-      message: `You have a new booking for ${service.name}`,
-      relatedId: booking._id,
-      relatedModel: 'Booking',
-      actionUrl: `/bookings/${booking._id}`,
-      priority: 'high',
-      sendEmailNotification: true,
-      emailData: {
-        to: owner.email,
-        subject: 'New Booking Received - TourisMe Luxor',
-        html: `
-          <h1>New Booking!</h1>
-          <p>Service: ${service.name}</p>
-          <p>Date: ${new Date(booking.serviceDate).toLocaleDateString()}</p>
-          <p>Revenue: $${booking.totalPrice}</p>
-        `
+    //  Notify business owner about new booking (non-blocking)
+    try {
+      const owner = await User.findById(service.ownerId);
+      if (owner) {
+        await createNotification({
+          userId: owner._id,
+          type: 'booking_confirmed',
+          title: 'New Booking Received',
+          message: `You have a new booking for ${service.name}`,
+          relatedId: booking._id,
+          relatedModel: 'Booking',
+          actionUrl: `/bookings/${booking._id}`,
+          priority: 'high',
+          sendEmailNotification: true,
+          emailData: {
+            to: owner.email,
+            subject: 'New Booking Received - TourisMe Luxor',
+            html: `
+              <h1>New Booking!</h1>
+              <p>Service: ${service.name}</p>
+              <p>Date: ${new Date(booking.serviceDate).toLocaleDateString()}</p>
+              <p>Revenue: $${booking.totalPrice}</p>
+            `
+          }
+        });
       }
-    });
+    } catch (notifErr) {
+      console.error('Owner notification failed (non-blocking):', notifErr.message);
+    }
     // end notification
 
 
-    res.status(201).json({ 
-      message: 'Booking created successfully', 
-      booking 
+    res.status(201).json({
+      message: 'Booking created successfully',
+      booking
     });
   } catch (error) {
     res.status(400).json({ message: 'Error creating booking', error: error.message });
@@ -106,12 +112,12 @@ export const getBookings = async (req, res) => {
     // Role-based filtering
     if (req.user.role === 'Tourist') {
       query.touristId = req.user._id;
-    } 
+    }
     else if (req.user.role === 'LocalBusinessOwner') {
       // Find all services owned by this user
       const ownerServices = await Service.find({ ownerId: req.user._id }).select('_id');
       const serviceIds = ownerServices.map(service => service._id);
-      
+
       if (serviceIds.length === 0) {
         return res.status(200).json({
           bookings: [],
@@ -120,7 +126,7 @@ export const getBookings = async (req, res) => {
           totalBookings: 0
         });
       }
-      
+
       query.serviceId = { $in: serviceIds };
     }
     // Admins see everything (query remains as is)
@@ -130,7 +136,7 @@ export const getBookings = async (req, res) => {
 
     const bookings = await Booking.find(query)
       .populate('serviceId', 'name serviceType images price')
-      .populate('touristId', 'name email phone')
+      .populate('touristId', 'firstName lastName email phone')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -155,8 +161,8 @@ export const getBookingById = async (req, res) => {
   try {
     const booking = await Booking.findById(req.params.id)
       .populate('serviceId')
-      .populate('touristId', 'name email phone');
-
+      .populate('touristId', 'firstName lastName email phone');
+    s
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
     }
@@ -185,7 +191,7 @@ export const getBookingById = async (req, res) => {
 export const updateBookingStatus = async (req, res) => {
   try {
     const { status } = req.body;
-    
+
     if (!['Confirmed', 'Cancelled', 'Completed'].includes(status)) {
       return res.status(400).json({ message: 'Invalid status. Must be Confirmed, Cancelled, or Completed' });
     }
@@ -221,10 +227,10 @@ export const updateBookingStatus = async (req, res) => {
     await booking.save();
 
     await booking.populate('serviceId', 'name serviceType');
-    await booking.populate('touristId', 'name email');
+    await booking.populate('touristId', 'firstName lastName email');
 
 
-     //  Send notification based on status
+    //  Send notification based on status
     const tourist = await User.findById(booking.touristId);
 
     if (status === 'Confirmed') {
@@ -244,11 +250,11 @@ export const updateBookingStatus = async (req, res) => {
         priority: 'medium'
       });
     }
-      // end notifications
+    // end notifications
 
-    res.status(200).json({ 
-      message: `Booking ${status.toLowerCase()} successfully`, 
-      booking 
+    res.status(200).json({
+      message: `Booking ${status.toLowerCase()} successfully`,
+      booking
     });
   } catch (error) {
     res.status(400).json({ message: 'Error updating booking', error: error.message });
@@ -274,8 +280,8 @@ export const updateBooking = async (req, res) => {
 
     // Cannot update confirmed or completed bookings
     if (['Confirmed', 'Completed'].includes(booking.status)) {
-      return res.status(400).json({ 
-        message: 'Cannot update a confirmed or completed booking. Please cancel and create a new one.' 
+      return res.status(400).json({
+        message: 'Cannot update a confirmed or completed booking. Please cancel and create a new one.'
       });
     }
 
@@ -302,9 +308,9 @@ export const updateBooking = async (req, res) => {
     await booking.save();
     await booking.populate('serviceId', 'name serviceType price');
 
-    res.status(200).json({ 
-      message: 'Booking updated successfully', 
-      booking 
+    res.status(200).json({
+      message: 'Booking updated successfully',
+      booking
     });
   } catch (error) {
     res.status(400).json({ message: 'Error updating booking', error: error.message });

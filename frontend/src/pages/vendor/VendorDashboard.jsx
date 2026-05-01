@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
-import { Plus, Edit2, Trash2, Package, X, Save, BarChart3, Users, Car, Bike, UtensilsCrossed, Landmark, Loader2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Package, X, Save, BarChart3, Users, Car, Bike, UtensilsCrossed, Landmark, Loader2, Eye } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import vendorService from '../../services/vendorService';
 import individualServicesService from '../../services/individualServicesService';
@@ -23,6 +24,7 @@ const emptySvcForm = {
 
 const VendorDashboard = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('programs');
     const [programs, setPrograms] = useState([]);
     const [stats, setStats] = useState({ total: 0, totalBookings: 0 });
@@ -217,8 +219,18 @@ const VendorDashboard = () => {
                     {/* Stats */}
                     <div className="grid grid-cols-2 gap-4 mb-6">
                         {[
-                            { label: 'Total Programs', value: stats.total, icon: Package, color: 'primary' },
-                            { label: 'Total Bookings', value: stats.totalBookings, icon: Users, color: 'secondary' },
+                            { 
+                                label: activeTab === 'programs' ? 'Total Programs' : 'Total Services', 
+                                value: (activeTab === 'programs' ? programs : myServices).length, 
+                                icon: Package, 
+                                color: 'primary' 
+                            },
+                            { 
+                                label: 'Total Bookings', 
+                                value: (activeTab === 'programs' ? programs : myServices).reduce((sum, item) => sum + (item.bookings || 0), 0), 
+                                icon: Users, 
+                                color: 'secondary' 
+                            },
                         ].map((s, i) => {
                             const Icon = s.icon;
                             return (
@@ -337,7 +349,7 @@ const VendorDashboard = () => {
                                                     <td className="py-4 px-4"><div className="flex items-center gap-3"><img src={p.images && p.images.length > 0 ? p.images[0] : 'https://images.unsplash.com/photo-1549317661-bd32c8ce0e6e?w=100'} alt={p.name} className="w-12 h-12 rounded-lg object-cover" /><div><p className="font-semibold text-white text-sm">{p.name}</p><p className="text-xs text-white/40">{p.durationDays} Days</p></div></div></td>
                                                     <td className="py-4 px-4 text-white/80">${p.price}</td>
                                                     <td className="py-4 px-4 text-white/80">{p.bookings || 0}</td>
-                                                    <td className="py-4 px-4"><div className="flex items-center justify-end gap-2"><button onClick={() => openEdit(p)} className="p-2 hover:bg-primary-500/10 rounded-lg transition-colors"><Edit2 className="w-4 h-4 text-primary-400" /></button><button onClick={() => setDeleteConfirm(p._id || p.id)} className="p-2 hover:bg-red-500/10 rounded-lg transition-colors"><Trash2 className="w-4 h-4 text-red-400" /></button></div></td>
+                                                    <td className="py-4 px-4"><div className="flex items-center justify-end gap-2"><button onClick={() => navigate(`/vendor/service/${p._id || p.id}`)} className="p-2 hover:bg-blue-500/10 rounded-lg transition-colors"><Eye className="w-4 h-4 text-blue-400" /></button><button onClick={() => openEdit(p)} className="p-2 hover:bg-primary-500/10 rounded-lg transition-colors"><Edit2 className="w-4 h-4 text-primary-400" /></button><button onClick={() => setDeleteConfirm(p._id || p.id)} className="p-2 hover:bg-red-500/10 rounded-lg transition-colors"><Trash2 className="w-4 h-4 text-red-400" /></button></div></td>
                                                 </tr>
                                             ))}
                                         </tbody>
@@ -357,6 +369,7 @@ const VendorDashboard = () => {
                                             <th className="text-left py-4 px-4 text-white/60 font-medium text-sm">Service</th>
                                             <th className="text-left py-4 px-4 text-white/60 font-medium text-sm">Category</th>
                                             <th className="text-left py-4 px-4 text-white/60 font-medium text-sm">Price</th>
+                                            <th className="text-left py-4 px-4 text-white/60 font-medium text-sm">Bookings</th>
                                             <th className="text-right py-4 px-4 text-white/60 font-medium text-sm">Actions</th>
                                         </tr></thead>
                                         <tbody>
@@ -367,7 +380,8 @@ const VendorDashboard = () => {
                                                         <td className="py-4 px-4"><div className="flex items-center gap-3"><img src={s.images && s.images.length > 0 ? s.images[0] : 'https://images.unsplash.com/photo-1568322445389-f64ac2515020?w=100'} alt={s.name} className="w-12 h-12 rounded-lg object-cover" /><div><p className="font-semibold text-white text-sm">{s.name}</p></div></div></td>
                                                         <td className="py-4 px-4"><span className="flex items-center gap-1 text-sm text-white/70"><CatIcon className="w-4 h-4" />{individualServicesService.getCategories().find(c => c.id === s.serviceType)?.label || s.serviceType}</span></td>
                                                         <td className="py-4 px-4 text-white/80">${s.price}</td>
-                                                        <td className="py-4 px-4"><div className="flex items-center justify-end gap-2"><button onClick={() => openEditSvc(s)} className="p-2 hover:bg-primary-500/10 rounded-lg transition-colors"><Edit2 className="w-4 h-4 text-primary-400" /></button><button onClick={() => setDeleteConfirm(`svc-del-${s._id || s.id}`)} className="p-2 hover:bg-red-500/10 rounded-lg transition-colors"><Trash2 className="w-4 h-4 text-red-400" /></button></div></td>
+                                                        <td className="py-4 px-4 text-white/80">{s.bookings || 0}</td>
+                                                        <td className="py-4 px-4"><div className="flex items-center justify-end gap-2"><button onClick={() => navigate(`/vendor/service/${s._id || s.id}`)} className="p-2 hover:bg-blue-500/10 rounded-lg transition-colors"><Eye className="w-4 h-4 text-blue-400" /></button><button onClick={() => openEditSvc(s)} className="p-2 hover:bg-primary-500/10 rounded-lg transition-colors"><Edit2 className="w-4 h-4 text-primary-400" /></button><button onClick={() => setDeleteConfirm(`svc-del-${s._id || s.id}`)} className="p-2 hover:bg-red-500/10 rounded-lg transition-colors"><Trash2 className="w-4 h-4 text-red-400" /></button></div></td>
                                                     </tr>
                                                 );
                                             })}

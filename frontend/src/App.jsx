@@ -30,7 +30,10 @@ import AdminPrograms from './pages/admin/AdminPrograms';
 import AdminTrips from './pages/admin/AdminTrips';
 import AdminServices from './pages/admin/AdminServices';
 import VendorDashboard from './pages/vendor/VendorDashboard';
+import VendorServiceDetail from './pages/vendor/VendorServiceDetail';
+import VendorBookings from './pages/vendor/VendorBookings';
 import Services from './pages/Services';
+import ServiceDetail from './pages/ServiceDetail';
 import TripPlanner from './pages/TripPlanner';
 import NotFound from './pages/NotFound';
 
@@ -114,6 +117,11 @@ function App() {
                                                         <Services />
                                                     </TouristOrGuestRoute>
                                                 } />
+                                                <Route path="/services/:id" element={
+                                                    <TouristOrGuestRoute>
+                                                        <ServiceDetail />
+                                                    </TouristOrGuestRoute>
+                                                } />
                                                 <Route path="/about" element={<About />} />
                                                 <Route path="/contact" element={<Contact />} />
 
@@ -143,6 +151,16 @@ function App() {
                                                 <Route path="/vendor/dashboard" element={
                                                     <VendorRoute>
                                                         <VendorDashboard />
+                                                    </VendorRoute>
+                                                } />
+                                                <Route path="/vendor/service/:id" element={
+                                                    <VendorRoute>
+                                                        <VendorServiceDetail />
+                                                    </VendorRoute>
+                                                } />
+                                                <Route path="/vendor/bookings" element={
+                                                    <VendorRoute>
+                                                        <VendorBookings />
                                                     </VendorRoute>
                                                 } />
 

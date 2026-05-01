@@ -1,5 +1,6 @@
 import TripPlan from '../models/tripPlans.model.js';
 import Attraction from '../models/attraction.model.js';
+import { Service } from '../models/service.model.js';
 import { createNotification } from '../utils/notificationHelper.js';
 
 // @desc    Create a new trip plan
@@ -49,7 +50,9 @@ export const getUserTripPlans = async (req, res) => {
     }
 
     const trips = await TripPlan.find(query)
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .populate('itineraryItems.attractionId', 'name category images ticketPrice location openingHours averageRating')
+      .populate('itineraryItems.serviceId', 'name serviceType images price averageRating location');
 
     res.status(200).json(trips);
   } catch (error) {
@@ -66,7 +69,8 @@ export const getUserTripPlans = async (req, res) => {
 export const getTripPlanById = async (req, res) => {
   try {
     const trip = await TripPlan.findById(req.params.id)
-      .populate('itineraryItems.attractionId', 'name category images ticketPrice location openingHours averageRating');
+      .populate('itineraryItems.attractionId', 'name category images ticketPrice location openingHours averageRating')
+      .populate('itineraryItems.serviceId', 'name serviceType images price averageRating location');
 
     if (!trip) {
       return res.status(404).json({ message: 'Trip plan not found' });
@@ -112,10 +116,11 @@ export const updateTripPlan = async (req, res) => {
       req.params.id, 
       req.body, 
       {
-        new: true,
+        returnDocument: 'after',
         runValidators: true
       }
-    );
+    ).populate('itineraryItems.attractionId', 'name category images ticketPrice location openingHours averageRating')
+     .populate('itineraryItems.serviceId', 'name serviceType images price averageRating location');
 
     res.status(200).json({ 
       message: 'Trip plan updated successfully', 
@@ -134,12 +139,23 @@ export const updateTripPlan = async (req, res) => {
 // @access  Private (Tourist)
 export const addItineraryItem = async (req, res) => {
   try {
-    const { attractionId, dayNumber, scheduledTime, notes } = req.body;
+    const { attractionId, serviceId, dayNumber, scheduledTime, notes } = req.body;
 
-    // Validate attraction exists
-    const attraction = await Attraction.findById(attractionId);
-    if (!attraction) {
-      return res.status(404).json({ message: 'Attraction not found' });
+    if (!attractionId && !serviceId) {
+      return res.status(400).json({ message: 'Attraction ID or Service ID is required' });
+    }
+
+    // Validate attraction or service exists
+    if (attractionId) {
+      const attraction = await Attraction.findById(attractionId);
+      if (!attraction) {
+        return res.status(404).json({ message: 'Attraction not found' });
+      }
+    } else if (serviceId) {
+      const service = await Service.findById(serviceId);
+      if (!service) {
+        return res.status(404).json({ message: 'Service not found' });
+      }
     }
 
     const trip = await TripPlan.findById(req.params.id);
@@ -151,20 +167,22 @@ export const addItineraryItem = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized' });
     }
 
-    // Check if attraction already in itinerary
+    // Check if item already in itinerary
     const alreadyAdded = trip.itineraryItems.some(
-      item => item.attractionId.toString() === attractionId
+      item => (attractionId && item.attractionId?.toString() === attractionId) ||
+              (serviceId && item.serviceId?.toString() === serviceId)
     );
 
     if (alreadyAdded) {
       return res.status(400).json({ 
-        message: 'Attraction already in itinerary' 
+        message: 'Item already in itinerary' 
       });
     }
 
     // Add to itinerary
     trip.itineraryItems.push({
       attractionId,
+      serviceId,
       dayNumber,
       scheduledTime,
       notes
@@ -172,8 +190,9 @@ export const addItineraryItem = async (req, res) => {
 
     await trip.save();
 
-    // Populate the newly added attraction
+    // Populate the newly added items
     await trip.populate('itineraryItems.attractionId', 'name category images ticketPrice location');
+    await trip.populate('itineraryItems.serviceId', 'name serviceType images price location');
 
     res.status(200).json({ 
       message: 'Attraction added to itinerary', 
@@ -215,6 +234,9 @@ export const updateItineraryItem = async (req, res) => {
 
     await trip.save();
 
+    await trip.populate('itineraryItems.attractionId', 'name category images ticketPrice location openingHours averageRating');
+    await trip.populate('itineraryItems.serviceId', 'name serviceType images price averageRating location');
+
     res.status(200).json({ 
       message: 'Itinerary item updated', 
       trip 
@@ -247,6 +269,9 @@ export const removeItineraryItem = async (req, res) => {
     );
 
     await trip.save();
+
+    await trip.populate('itineraryItems.attractionId', 'name category images ticketPrice location openingHours averageRating');
+    await trip.populate('itineraryItems.serviceId', 'name serviceType images price averageRating location');
 
     res.status(200).json({ 
       message: 'Attraction removed from itinerary', 
@@ -302,7 +327,8 @@ export const reorderItinerary = async (req, res) => {
 export const exportTripPlan = async (req, res) => {
   try {
     const trip = await TripPlan.findById(req.params.id)
-      .populate('itineraryItems.attractionId', 'name description category ticketPrice openingHours images location averageRating');
+      .populate('itineraryItems.attractionId', 'name description category ticketPrice openingHours images location averageRating')
+      .populate('itineraryItems.serviceId', 'name description serviceType price images location averageRating');
 
     if (!trip) {
       return res.status(404).json({ message: 'Trip plan not found' });

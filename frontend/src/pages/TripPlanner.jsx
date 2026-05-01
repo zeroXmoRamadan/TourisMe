@@ -11,10 +11,9 @@ import Alert from '../components/common/Alert';
 
 const categoryIcons = { car_rental: Car, bicycle_rental: Bike, restaurant: UtensilsCrossed, temple_visit: Landmark };
 const statusStyles = {
-    planning: { bg: 'bg-blue-500/10', text: 'text-blue-400', label: 'Planning' },
-    confirmed: { bg: 'bg-green-500/10', text: 'text-green-400', label: 'Confirmed' },
-    completed: { bg: 'bg-purple-500/10', text: 'text-purple-400', label: 'Completed' },
-    cancelled: { bg: 'bg-red-500/10', text: 'text-red-400', label: 'Cancelled' },
+    Draft: { bg: 'bg-blue-500/10', text: 'text-blue-400', label: 'Draft' },
+    Confirmed: { bg: 'bg-green-500/10', text: 'text-green-400', label: 'Confirmed' },
+    Completed: { bg: 'bg-purple-500/10', text: 'text-purple-400', label: 'Completed' },
 };
 
 const TripPlanner = () => {
@@ -32,47 +31,59 @@ const TripPlanner = () => {
     const headerRef = useRef(null);
     const contentRef = useRef(null);
 
-    const load = () => setTrips(tripPlannerService.getByUser(user.id));
+    const [loading, setLoading] = useState(true);
+    const [actionLoading, setActionLoading] = useState(false);
+
+    const load = async () => {
+        setLoading(true);
+        const data = await tripPlannerService.getByUser(user._id);
+        setTrips(data);
+        setLoading(false);
+    };
     useEffect(() => { load(); }, []);
 
     useEffect(() => {
-        gsap.fromTo(headerRef.current, { opacity: 0, y: -30 }, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' });
-        gsap.fromTo(contentRef.current, { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.6, delay: 0.2, ease: 'power3.out' });
-    }, []);
+        if (headerRef.current) gsap.fromTo(headerRef.current, { opacity: 0, y: -30 }, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' });
+        if (contentRef.current) gsap.fromTo(contentRef.current, { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.6, delay: 0.2, ease: 'power3.out' });
+    }, [loading]);
 
     const flash = (type, message) => { setAlert({ type, message }); setTimeout(() => setAlert(null), 3000); };
 
-    const handleCreate = (e) => {
+    const handleCreate = async (e) => {
         e.preventDefault();
-        const result = tripPlannerService.create(user.id, `${user.firstName} ${user.lastName}`, {
+        setActionLoading(true);
+        const result = await tripPlannerService.create(user._id, `${user.firstName} ${user.lastName}`, {
             name: newTripName || 'My Luxor Trip', date: newTripDate, notes: newTripNotes
         });
-        if (result.success) { flash('success', 'Trip created!'); load(); setShowCreateForm(false); setNewTripName(''); setNewTripDate(''); setNewTripNotes(''); }
+        setActionLoading(false);
+        if (result.success) { flash('success', 'Trip created!'); await load(); setShowCreateForm(false); setNewTripName(''); setNewTripDate(''); setNewTripNotes(''); }
         else flash('error', result.error);
     };
 
-    const handleUpdateStatus = (tripId, status) => {
-        const result = tripPlannerService.updateStatus(tripId, user.id, status);
-        if (result.success) { flash('success', `Trip ${status}!`); load(); }
+    const handleUpdateStatus = async (tripId, status) => {
+        const result = await tripPlannerService.updateStatus(tripId, user._id, status);
+        if (result.success) { flash('success', `Trip ${status}!`); await load(); }
     };
 
-    const handleRemoveItem = (tripId, itemId) => {
-        const result = tripPlannerService.removeItem(tripId, user.id, itemId);
-        if (result.success) { flash('success', 'Item removed'); load(); }
+    const handleRemoveItem = async (tripId, itemId) => {
+        const result = await tripPlannerService.removeItem(tripId, user._id, itemId);
+        if (result.success) { flash('success', 'Item removed'); await load(); }
     };
 
-    const handleDelete = (tripId) => {
-        const result = tripPlannerService.delete(tripId, user.id);
-        if (result.success) { flash('success', 'Trip deleted'); load(); }
+    const handleDelete = async (tripId) => {
+        const result = await tripPlannerService.delete(tripId, user._id);
+        if (result.success) { flash('success', 'Trip deleted'); await load(); }
         setDeleteConfirm(null);
     };
 
-    const handleUpdateTrip = (e) => {
+    const handleUpdateTrip = async (e) => {
         e.preventDefault();
-        const result = tripPlannerService.update(editingTrip.id, user.id, {
-            name: newTripName, date: newTripDate, notes: newTripNotes
+        setActionLoading(true);
+        const result = await tripPlannerService.update(editingTrip.id, user._id, {
+            title: newTripName, startDate: newTripDate, notes: newTripNotes
         });
-        if (result.success) { flash('success', 'Trip updated!'); load(); setEditingTrip(null); }
+        setActionLoading(false);
+        if (result.success) { flash('success', 'Trip updated!'); await load(); setEditingTrip(null); }
     };
 
     const openEdit = (trip) => {
@@ -126,8 +137,12 @@ const TripPlanner = () => {
                         </Card>
                     )}
 
-                    {/* Trips List */}
-                    {trips.length === 0 ? (
+                    {loading ? (
+                        <div className="text-center py-20">
+                            <div className="w-12 h-12 rounded-full border-4 border-primary-500/30 border-t-primary-500 animate-spin mx-auto mb-4" />
+                            <p className="text-white/50">Loading your trips...</p>
+                        </div>
+                    ) : trips.length === 0 ? (
                         <div className="text-center py-20">
                             <MapPin className="w-16 h-16 text-white/10 mx-auto mb-4" />
                             <h3 className="text-2xl font-bold text-white/30 mb-2">No trips yet</h3>
@@ -140,7 +155,7 @@ const TripPlanner = () => {
                     ) : (
                         <div className="space-y-4">
                             {trips.map(trip => {
-                                const st = statusStyles[trip.status] || statusStyles.planning;
+                                const st = statusStyles[trip.status] || statusStyles.Draft;
                                 const isExpanded = expandedTrip === trip.id;
                                 return (
                                     <Card key={trip.id} className="overflow-hidden">
@@ -188,7 +203,7 @@ const TripPlanner = () => {
                                                                     </div>
                                                                     <div className="flex items-center gap-3">
                                                                         <span className="text-sm font-semibold text-primary-400">${item.price}</span>
-                                                                        {trip.status === 'planning' && (
+                                                                        {trip.status === 'Draft' && (
                                                                             <button onClick={(e) => { e.stopPropagation(); handleRemoveItem(trip.id, item.id); }} className="p-1 hover:bg-red-500/10 rounded-lg transition-colors"><Trash2 className="w-3.5 h-3.5 text-red-400" /></button>
                                                                         )}
                                                                     </div>
@@ -207,21 +222,18 @@ const TripPlanner = () => {
 
                                                 {/* Actions */}
                                                 <div className="flex flex-wrap gap-2">
-                                                    {trip.status === 'planning' && (
+                                                    {trip.status === 'Draft' && (
                                                         <>
                                                             <Button variant="primary" size="sm" onClick={() => navigate('/services')}><Plus className="w-4 h-4 mr-1" />Add Services</Button>
-                                                            {trip.items.length > 0 && <Button variant="secondary" size="sm" onClick={() => handleUpdateStatus(trip.id, 'confirmed')}><CheckCircle className="w-4 h-4 mr-1" />Confirm Trip</Button>}
+                                                            {trip.items.length > 0 && <Button variant="secondary" size="sm" onClick={() => handleUpdateStatus(trip.id, 'Confirmed')}><CheckCircle className="w-4 h-4 mr-1" />Confirm Trip</Button>}
                                                             <Button variant="ghost" size="sm" onClick={() => openEdit(trip)}><Edit2 className="w-4 h-4 mr-1" />Edit</Button>
                                                         </>
                                                     )}
-                                                    {trip.status === 'confirmed' && (
+                                                    {trip.status === 'Confirmed' && (
                                                         <>
-                                                            <Button variant="primary" size="sm" onClick={() => handleUpdateStatus(trip.id, 'completed')}><CheckCircle className="w-4 h-4 mr-1" />Mark Complete</Button>
-                                                            <Button variant="ghost" size="sm" onClick={() => handleUpdateStatus(trip.id, 'planning')}>Back to Planning</Button>
+                                                            <Button variant="primary" size="sm" onClick={() => handleUpdateStatus(trip.id, 'Completed')}><CheckCircle className="w-4 h-4 mr-1" />Mark Complete</Button>
+                                                            <Button variant="ghost" size="sm" onClick={() => handleUpdateStatus(trip.id, 'Draft')}>Back to Planning</Button>
                                                         </>
-                                                    )}
-                                                    {(trip.status === 'planning' || trip.status === 'confirmed') && (
-                                                        <Button variant="ghost" size="sm" onClick={() => handleUpdateStatus(trip.id, 'cancelled')} className="text-red-400"><XCircle className="w-4 h-4 mr-1" />Cancel</Button>
                                                     )}
                                                     <Button variant="ghost" size="sm" onClick={() => setDeleteConfirm(trip.id)} className="text-red-400 ml-auto"><Trash2 className="w-4 h-4 mr-1" />Delete</Button>
                                                 </div>

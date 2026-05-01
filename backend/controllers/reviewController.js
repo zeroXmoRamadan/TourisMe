@@ -1,6 +1,8 @@
 import Review from '../models/reviews.model.js';
+import mongoose from 'mongoose';
 import Attraction from '../models/attraction.model.js';
 import { Service } from '../models/service.model.js';
+import User from '../models/user.model.js';
 import { createNotification, notificationTemplates } from '../utils/notificationHelper.js';
 import { sendEmail, emailTemplates } from '../utils/sendEmail.js';
 
@@ -90,19 +92,23 @@ export const createReview = async (req, res) => {
     });
 
     // Populate tourist info
-    await review.populate('touristId', 'name');
+    await review.populate('touristId', 'firstName lastName');
 
     // Update the average rating of the parent item (FR-R4)
     const stats = await updateAverageRating(targetId, targetModel);
 
-    // ✅ ADD THIS: Notify owner about new review
+    // Notify owner about new review (non-blocking)
     if (targetModel === 'Service') {
-      const service = await Service.findById(targetId).populate('ownerId');
-      const owner = await User.findById(service.ownerId);
-      
-      await notificationTemplates.newReview(review, owner, service);
+      try {
+        const svc = await Service.findById(targetId);
+        if (svc) {
+          const owner = await User.findById(svc.ownerId);
+          if (owner) await notificationTemplates.newReview(review, owner, svc);
+        }
+      } catch (notifErr) {
+        console.error('Review notification failed (non-blocking):', notifErr.message);
+      }
     }
-    // Note: For attractions, you might not have an owner, so skip notification
 
     res.status(201).json({ 
       message: 'Review added successfully', 
@@ -137,7 +143,7 @@ export const getReviewsByTarget = async (req, res) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     const reviews = await Review.find(query)
-      .populate('touristId', 'name')
+      .populate('touristId', 'firstName lastName')
       .sort(sort)
       .skip(skip)
       .limit(parseInt(limit));
@@ -146,7 +152,7 @@ export const getReviewsByTarget = async (req, res) => {
 
     // Get rating statistics
     const stats = await Review.aggregate([
-      { $match: { targetId: mongoose.Types.ObjectId(req.params.targetId) } },
+      { $match: { targetId: new mongoose.Types.ObjectId(req.params.targetId) } },
       {
         $group: {
           _id: null,
@@ -230,7 +236,7 @@ export const updateReview = async (req, res) => {
     // Recalculate average (FR-R4)
     const stats = await updateAverageRating(review.targetId, review.targetModel);
 
-    await review.populate('touristId', 'name');
+    await review.populate('touristId', 'firstName lastName');
 
     res.status(200).json({ 
       message: 'Review updated successfully', 

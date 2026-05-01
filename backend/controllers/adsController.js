@@ -227,7 +227,7 @@ export const updateAdStatus = async (req, res) => {
     const ad = await Advertisement.findByIdAndUpdate(
       req.params.id, 
       updateData,
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     ).populate('ownerId', 'name companyName email')
      .populate('serviceId', 'name');
 
@@ -284,7 +284,7 @@ export const trackImpression = async (req, res) => {
     const ad = await Advertisement.findByIdAndUpdate(
       req.params.id,
       { $inc: { impressionCount: 1 } },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (!ad) {
@@ -305,7 +305,7 @@ export const trackClick = async (req, res) => {
     const ad = await Advertisement.findByIdAndUpdate(
       req.params.id,
       { $inc: { clickCount: 1 } },
-      { new: true }
+      { returnDocument: 'after' }
     );
 
     if (!ad) {

@@ -328,7 +328,11 @@ const Services = () => {
                                         const typeLabel = SERVICE_TYPES.find(t => t.id === service.serviceType)?.label || service.serviceType;
                                         const vendor   = getVendor(service);
                                         return (
-                                            <div key={service._id || service.id} className="service-card group bg-dark-800/60 border border-white/5 rounded-2xl overflow-hidden hover:border-white/15 hover:shadow-[0_8px_32px_rgba(0,0,0,0.3)] transition-all duration-500 hover:-translate-y-1">
+                                            <div
+                                                key={service._id || service.id}
+                                                className="service-card group bg-dark-800/60 border border-white/5 rounded-2xl overflow-hidden hover:border-white/15 hover:shadow-[0_8px_32px_rgba(0,0,0,0.3)] transition-all duration-500 hover:-translate-y-1 cursor-pointer"
+                                                onClick={() => navigate(`/services/${service._id || service.id}`)}
+                                            >
                                                 <div className="relative h-48 overflow-hidden">
                                                     <img
                                                         src={getImage(service)}
@@ -356,7 +360,7 @@ const Services = () => {
                                                         <span className="text-xs text-white/40">({service.totalReviews ?? 0} reviews)</span>
                                                     </div>
                                                     <button
-                                                        onClick={() => handleAddToTrip(service)}
+                                                        onClick={e => { e.stopPropagation(); handleAddToTrip(service); }}
                                                         className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 text-white text-sm font-semibold hover:from-primary-400 hover:to-primary-500 transition-all duration-300 hover:-translate-y-0.5 shadow-[0_4px_15px_rgba(242,133,109,0.3)]"
                                                     >
                                                         <Plus className="w-4 h-4" />Add to Trip

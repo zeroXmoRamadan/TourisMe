@@ -8,11 +8,13 @@ const tripPlanSchema = new Schema({
   endDate: { type: Date },
   budget: { type: Number }, 
   intensityLevel: { type: String, enum: ['Relaxed', 'Balanced', 'Intense'] }, 
+  notes: { type: String },
   status: { type: String, enum: ['Draft', 'Confirmed', 'Completed'], default: 'Draft' },
   
   // Embedded itinerary items
   itineraryItems: [{
     attractionId: { type: Schema.Types.ObjectId, ref: 'Attraction' },
+    serviceId: { type: Schema.Types.ObjectId, ref: 'Service' }, // Added for adding services
     dayNumber: { type: Number },
     scheduledTime: { type: String },
     notes: { type: String }

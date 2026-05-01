@@ -1,4 +1,5 @@
 import { Service, Restaurant, Rental, TourPackage } from '../models/service.model.js';
+import Booking from '../models/booking.model.js';
 
 // @desc    Get all services (with filtering, search, and pagination)
 // @route   GET /api/services
@@ -222,9 +223,17 @@ export const getServicesByType = async (req, res) => {
 export const getMyServices = async (req, res) => {
   try {
     const services = await Service.find({ ownerId: req.user._id })
-      .sort('-createdAt');
+      .sort('-createdAt')
+      .lean();
 
-    res.status(200).json({ services });
+    const servicesWithBookings = await Promise.all(
+      services.map(async (service) => {
+        const bookingsCount = await Booking.countDocuments({ serviceId: service._id, status: { $ne: 'Cancelled' } });
+        return { ...service, bookings: bookingsCount };
+      })
+    );
+
+    res.status(200).json({ services: servicesWithBookings });
   } catch (error) {
     res.status(500).json({ message: 'Error fetching your services', error: error.message });
   }

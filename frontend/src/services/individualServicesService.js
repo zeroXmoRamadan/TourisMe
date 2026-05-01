@@ -18,6 +18,15 @@ class IndividualServicesService {
         }
     }
 
+    async getById(id) {
+        try {
+            const response = await api.get(`/services/${id}`);
+            return { success: true, service: response.data };
+        } catch (error) {
+            return { success: false, error: error.response?.data?.message || 'Service not found' };
+        }
+    }
+
 
     async getByVendor() {
         try {

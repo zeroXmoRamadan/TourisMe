@@ -154,7 +154,7 @@ export const updateAttraction = async (req, res) => {
       req.params.id, 
       req.body, 
       {
-        new: true, // Return the updated document
+        returnDocument: 'after', // Return the updated document
         runValidators: true // Ensure schema rules are followed
       }
     );
