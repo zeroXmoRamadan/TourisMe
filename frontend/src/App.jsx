@@ -35,7 +35,9 @@ import VendorBookings from './pages/vendor/VendorBookings';
 import Services from './pages/Services';
 import ServiceDetail from './pages/ServiceDetail';
 import TripPlanner from './pages/TripPlanner';
+import Notifications from './pages/Notifications';
 import NotFound from './pages/NotFound';
+import TouristOrVendorRoute from './components/auth/TouristOrVendorRoute';
 
 // Scroll to top on route change
 const ScrollToTop = () => {
@@ -145,6 +147,11 @@ function App() {
                                                     <TouristOnlyRoute>
                                                         <TripPlanner />
                                                     </TouristOnlyRoute>
+                                                } />
+                                                <Route path="/notifications" element={
+                                                    <TouristOrVendorRoute>
+                                                        <Notifications />
+                                                    </TouristOrVendorRoute>
                                                 } />
 
                                                 {/* Vendor routes */}

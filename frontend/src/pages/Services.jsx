@@ -357,7 +357,9 @@ const Services = () => {
                                                     <div className="flex items-center gap-1 pt-1">
                                                         <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
                                                         <span className="text-sm font-semibold text-white">{service.averageRating?.toFixed(1) || '—'}</span>
-                                                        <span className="text-xs text-white/40">({service.totalReviews ?? 0} reviews)</span>
+                                                        <span className="text-xs text-white/40">
+                                                            ({service.totalReviews ?? '—'} reviews)
+                                                        </span>
                                                     </div>
                                                     <button
                                                         onClick={e => { e.stopPropagation(); handleAddToTrip(service); }}

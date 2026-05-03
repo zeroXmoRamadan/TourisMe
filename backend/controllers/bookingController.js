@@ -59,7 +59,7 @@ export const createBooking = async (req, res) => {
           message: `You have a new booking for ${service.name}`,
           relatedId: booking._id,
           relatedModel: 'Booking',
-          actionUrl: `/bookings/${booking._id}`,
+          actionUrl: '/vendor/dashboard',
           priority: 'high',
           sendEmailNotification: true,
           emailData: {
@@ -162,7 +162,7 @@ export const getBookingById = async (req, res) => {
     const booking = await Booking.findById(req.params.id)
       .populate('serviceId')
       .populate('touristId', 'firstName lastName email phone');
-    s
+
     if (!booking) {
       return res.status(404).json({ message: 'Booking not found' });
     }
@@ -237,6 +237,34 @@ export const updateBookingStatus = async (req, res) => {
       await notificationTemplates.bookingConfirmed(booking, tourist);
     } else if (status === 'Cancelled') {
       await notificationTemplates.bookingCancelled(booking, tourist);
+      if (req.user.role === 'Tourist') {
+        try {
+          const serviceId = booking.serviceId?._id || booking.serviceId;
+          const serviceDoc = await Service.findById(serviceId);
+          const serviceName =
+            (typeof booking.serviceId === 'object' && booking.serviceId?.name) ||
+            serviceDoc?.name ||
+            'your service';
+          if (serviceDoc) {
+            const owner = await User.findById(serviceDoc.ownerId);
+            if (owner) {
+              await createNotification({
+                userId: owner._id,
+                type: 'booking_cancelled',
+                title: 'Booking Cancelled by Guest',
+                message: `A guest cancelled their booking for ${serviceName}.`,
+                relatedId: booking._id,
+                relatedModel: 'Booking',
+                actionUrl: null,
+                priority: 'medium',
+                sendEmailNotification: false
+              });
+            }
+          }
+        } catch (notifErr) {
+          console.error('Owner cancel notification failed (non-blocking):', notifErr.message);
+        }
+      }
     } else if (status === 'Completed') {
       // Notify tourist that service is completed
       await createNotification({

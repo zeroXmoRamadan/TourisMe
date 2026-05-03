@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Menu, X, User, LogOut, Calendar, Plane, Landmark, Shield, Store, Package, Users, Car, MapPin, CalendarDays } from 'lucide-react';
+import { Menu, X, User, LogOut, Calendar, Plane, Landmark, Shield, Store, Package, Users, Car, MapPin, CalendarDays, Bell } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import Button from '../common/Button';
+import notificationService from '../../services/notificationService';
 
 const Navbar = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
     const [isScrolled, setIsScrolled] = useState(false);
+    const [unreadNotifications, setUnreadNotifications] = useState(0);
     const { user, isAuthenticated, logout } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
@@ -22,6 +24,26 @@ const Navbar = () => {
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
+    useEffect(() => {
+        const showBadge =
+            isAuthenticated &&
+            (user?.role === 'Tourist' || user?.role === 'LocalBusinessOwner');
+        if (!showBadge) {
+            setUnreadNotifications(0);
+            return;
+        }
+        let cancelled = false;
+        (async () => {
+            const result = await notificationService.getUnreadCount();
+            if (!cancelled && result.success) {
+                setUnreadNotifications(result.unreadCount ?? 0);
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [isAuthenticated, user?.role, location.pathname]);
+
     const handleLogout = () => {
         logout();
         setIsUserMenuOpen(false);
@@ -29,11 +51,18 @@ const Navbar = () => {
     };
 
     const getNavLinks = () => {
+        const inbox =
+            isAuthenticated &&
+            (user?.role === 'Tourist' || user?.role === 'LocalBusinessOwner')
+                ? [{ path: '/notifications', label: 'Notifications' }]
+                : [];
+
         if (user?.role === 'LocalBusinessOwner') {
             return [
                 { path: '/', label: 'Home' },
                 { path: '/vendor/dashboard', label: 'Dashboard' },
                 { path: '/vendor/bookings', label: 'Booking Requests' },
+                ...inbox,
                 { path: '/about', label: 'About' },
                 { path: '/contact', label: 'Contact' },
             ];
@@ -43,6 +72,7 @@ const Navbar = () => {
             { path: '/', label: 'Home' },
             { path: '/services', label: 'Services' },
             { path: '/attractions', label: 'Attractions' },
+            ...inbox,
             { path: '/about', label: 'About' },
             { path: '/contact', label: 'Contact' },
         ];
@@ -83,7 +113,14 @@ const Navbar = () => {
                                     : 'text-white/70 hover:text-white hover:bg-white/5'
                                     }`}
                             >
-                                {link.label}
+                                <span className="inline-flex items-center gap-2">
+                                    {link.label}
+                                    {link.path === '/notifications' && unreadNotifications > 0 && (
+                                        <span className="min-w-[1.25rem] h-5 px-1 rounded-full bg-primary-500 text-[0.65rem] font-bold text-white flex items-center justify-center leading-none">
+                                            {unreadNotifications > 99 ? '99+' : unreadNotifications}
+                                        </span>
+                                    )}
+                                </span>
                                 {isActive(link.path) && (
                                     <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-0.5 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full" />
                                 )}
@@ -123,6 +160,26 @@ const Navbar = () => {
                                                 <User className="w-4 h-4 text-primary-400" />
                                                 <span className="text-white/80">My Profile</span>
                                             </Link>
+                                            {(user?.role === 'Tourist' ||
+                                                user?.role === 'LocalBusinessOwner') && (
+                                                <Link
+                                                    to="/notifications"
+                                                    className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors"
+                                                    onClick={() => setIsUserMenuOpen(false)}
+                                                >
+                                                    <Bell className="w-4 h-4 text-primary-400" />
+                                                    <span className="text-white/80 flex items-center gap-2">
+                                                        Notifications
+                                                        {unreadNotifications > 0 && (
+                                                            <span className="min-w-[1.25rem] h-5 px-1 rounded-full bg-primary-500 text-[0.65rem] font-bold text-white flex items-center justify-center">
+                                                                {unreadNotifications > 99
+                                                                    ? '99+'
+                                                                    : unreadNotifications}
+                                                            </span>
+                                                        )}
+                                                    </span>
+                                                </Link>
+                                            )}
                                             {user?.role === 'Tourist' && (
                                                 <>
                                                     <Link
@@ -272,7 +329,17 @@ const Navbar = () => {
                                         : 'text-white/70 hover:bg-white/5 hover:text-white'
                                         }`}
                                 >
-                                    {link.label}
+                                    <span className="inline-flex items-center gap-2">
+                                        {link.label}
+                                        {link.path === '/notifications' &&
+                                            unreadNotifications > 0 && (
+                                                <span className="min-w-[1.25rem] h-5 px-1 rounded-full bg-primary-500 text-[0.65rem] font-bold text-white flex items-center justify-center">
+                                                    {unreadNotifications > 99
+                                                        ? '99+'
+                                                        : unreadNotifications}
+                                                </span>
+                                            )}
+                                    </span>
                                 </Link>
                             ))}
 
@@ -288,6 +355,26 @@ const Navbar = () => {
                                         <User className="w-5 h-5 text-primary-400" />
                                         My Profile
                                     </Link>
+                                    {(user?.role === 'Tourist' ||
+                                        user?.role === 'LocalBusinessOwner') && (
+                                        <Link
+                                            to="/notifications"
+                                            onClick={() => setIsMenuOpen(false)}
+                                            className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/5 hover:text-white transition-colors"
+                                        >
+                                            <Bell className="w-5 h-5 text-primary-400" />
+                                            <span className="flex items-center gap-2">
+                                                Notifications
+                                                {unreadNotifications > 0 && (
+                                                    <span className="min-w-[1.25rem] h-5 px-1 rounded-full bg-primary-500 text-[0.65rem] font-bold text-white flex items-center justify-center">
+                                                        {unreadNotifications > 99
+                                                            ? '99+'
+                                                            : unreadNotifications}
+                                                    </span>
+                                                )}
+                                            </span>
+                                        </Link>
+                                    )}
                                     {user?.role === 'Tourist' && (
                                         <>
                                             <Link

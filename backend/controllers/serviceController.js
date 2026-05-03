@@ -1,5 +1,47 @@
 import { Service, Restaurant, Rental, TourPackage } from '../models/service.model.js';
 import Booking from '../models/booking.model.js';
+import Review from '../models/reviews.model.js';
+
+const attachReviewStats = async (services) => {
+  if (!services?.length) return services;
+
+  const serviceIds = services.map((service) => service._id);
+  const reviewStats = await Review.aggregate([
+    {
+      $match: {
+        targetModel: 'Service',
+        targetId: { $in: serviceIds }
+      }
+    },
+    {
+      $group: {
+        _id: '$targetId',
+        totalReviews: { $sum: 1 },
+        averageRating: { $avg: '$rating' }
+      }
+    }
+  ]);
+
+  const reviewStatsByServiceId = new Map(
+    reviewStats.map((item) => [
+      item._id.toString(),
+      {
+        totalReviews: item.totalReviews,
+        averageRating: Number(item.averageRating?.toFixed(1) || 0)
+      }
+    ])
+  );
+
+  return services.map((serviceDoc) => {
+    const service = serviceDoc.toObject ? serviceDoc.toObject() : serviceDoc;
+    const stats = reviewStatsByServiceId.get(service._id.toString());
+    return {
+      ...service,
+      totalReviews: stats?.totalReviews || 0,
+      averageRating: stats?.averageRating ?? service.averageRating ?? 0
+    };
+  });
+};
 
 // @desc    Get all services (with filtering, search, and pagination)
 // @route   GET /api/services
@@ -48,11 +90,12 @@ export const getServices = async (req, res) => {
       .sort(sort)
       .skip(skip)
       .limit(parseInt(limit));
+    const servicesWithReviewCounts = await attachReviewStats(services);
 
     const total = await Service.countDocuments(query);
 
     res.status(200).json({
-      services,
+      services: servicesWithReviewCounts,
       currentPage: parseInt(page),
       totalPages: Math.ceil(total / parseInt(limit)),
       totalServices: total
@@ -74,7 +117,8 @@ export const getServiceById = async (req, res) => {
       return res.status(404).json({ message: 'Service not found' });
     }
     
-    res.status(200).json(service);
+    const [serviceWithReviewCount] = await attachReviewStats([service]);
+    res.status(200).json(serviceWithReviewCount);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching service', error: error.message });
   }
@@ -203,11 +247,12 @@ export const getServicesByType = async (req, res) => {
       .sort('-averageRating')
       .skip(skip)
       .limit(parseInt(limit));
+    const servicesWithReviewCounts = await attachReviewStats(services);
 
     const total = await Service.countDocuments({ serviceType });
 
     res.status(200).json({
-      services,
+      services: servicesWithReviewCounts,
       currentPage: parseInt(page),
       totalPages: Math.ceil(total / parseInt(limit)),
       totalServices: total
@@ -253,8 +298,9 @@ export const getTopRatedServices = async (req, res) => {
       .populate('ownerId', 'name companyName')
       .sort('-averageRating')
       .limit(parseInt(limit));
+    const servicesWithReviewCounts = await attachReviewStats(services);
 
-    res.status(200).json(services);
+    res.status(200).json(servicesWithReviewCounts);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching top-rated services', error: error.message });
   }
