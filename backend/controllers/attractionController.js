@@ -97,7 +97,7 @@ export const createAttraction = async (req, res) => {
     const { name, description, category, ticketPrice, openingHours, lng, lat } = req.body;
 
     // Validation
-    if (!name || !lng || !lat) {
+    if (!name || lng === undefined || lat === undefined) {
       return res.status(400).json({ message: 'Name, longitude, and latitude are required' });
     }
 
@@ -108,7 +108,7 @@ export const createAttraction = async (req, res) => {
       name,
       description,
       category,
-      ticketPrice,
+      ticketPrice: ticketPrice ? Number(ticketPrice) : 0,
       openingHours,
       images,
       location: {
@@ -122,7 +122,8 @@ export const createAttraction = async (req, res) => {
       attraction: newAttraction 
     });
   } catch (error) {
-    res.status(400).json({ message: 'Invalid data', error: error.message });
+    console.error('Create Attraction Error:', error);
+    res.status(400).json({ message: error.message || 'Error creating attraction' });
   }
 };
 
@@ -131,31 +132,35 @@ export const createAttraction = async (req, res) => {
 // @access  Private/Admin
 export const updateAttraction = async (req, res) => {
   try {
+    const updateData = { ...req.body };
+
     // If location is being updated, format it for GeoJSON
-    if (req.body.lng && req.body.lat) {
-      req.body.location = {
+    if (updateData.lng && updateData.lat) {
+      updateData.location = {
         type: 'Point',
-        coordinates: [parseFloat(req.body.lng), parseFloat(req.body.lat)]
+        coordinates: [parseFloat(updateData.lng), parseFloat(updateData.lat)]
       };
       // Remove lng and lat from body to avoid saving them as separate fields
-      delete req.body.lng;
-      delete req.body.lat;
+      delete updateData.lng;
+      delete updateData.lat;
     }
 
     // Handle new image uploads
     if (req.files && req.files.length > 0) {
       const newImages = req.files.map(file => file.path);
-      // Append new images to existing ones or replace them
       const existingAttraction = await Attraction.findById(req.params.id);
-      req.body.images = [...(existingAttraction?.images || []), ...newImages];
+      updateData.images = [...(existingAttraction?.images || []), ...newImages];
     }
+
+    // Ensure numeric fields are numbers
+    if (updateData.ticketPrice) updateData.ticketPrice = Number(updateData.ticketPrice);
 
     const attraction = await Attraction.findByIdAndUpdate(
       req.params.id, 
-      req.body, 
+      updateData, 
       {
-        returnDocument: 'after', // Return the updated document
-        runValidators: true // Ensure schema rules are followed
+        new: true, // Return the updated document
+        runValidators: true 
       }
     );
 
@@ -168,7 +173,8 @@ export const updateAttraction = async (req, res) => {
       attraction 
     });
   } catch (error) {
-    res.status(400).json({ message: 'Error updating attraction', error: error.message });
+    console.error('Update Attraction Error:', error);
+    res.status(400).json({ message: error.message || 'Error updating attraction' });
   }
 };
 

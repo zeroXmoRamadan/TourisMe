@@ -5,6 +5,7 @@ import {
   createService,
   updateService,
   deleteService,
+  updateServiceStatus,
   getServicesByType,
   getMyServices,
   getTopRatedServices
@@ -38,6 +39,13 @@ router.put(
   authorizeRoles('LocalBusinessOwner', 'Admin'), 
   upload.array('images', 5), 
   updateService
+);
+
+router.put(
+  '/:id/status',
+  protect,
+  authorizeRoles('Admin'),
+  updateServiceStatus
 );
 
 router.delete(

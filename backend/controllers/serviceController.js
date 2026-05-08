@@ -138,24 +138,33 @@ export const createService = async (req, res) => {
       });
     }
 
-    // Validate serviceType
-    if (!['Restaurant', 'Rental', 'TourPackage'].includes(serviceType)) {
-      return res.status(400).json({ 
-        message: 'Invalid service type. Must be Restaurant, Rental, or TourPackage' 
-      });
-    }
-
-    // Extract uploaded images from Multer/Cloudinary
+    // Extract uploaded images
     const images = req.files ? req.files.map(file => file.path || file.secure_url || file.url) : [];
 
-    // Build the service data payload
+    // Cast numeric fields
     const serviceData = {
       ...req.body,
-      ownerId: req.user._id, // Assign the logged-in user as the owner
-      images
+      price: Number(price),
+      ownerId: req.user._id,
+      images,
+      status: req.user.role === 'LocalBusinessOwner' || req.user.role === 'Admin' ? 'approved' : 'pending'
     };
 
-    // Mongoose discriminators automatically create the correct type
+    // Type-specific casting
+    if (serviceType === 'Rental' && req.body.capacity) {
+      serviceData.capacity = Number(req.body.capacity);
+    }
+    if (serviceType === 'Restaurant' && req.body.tableCapacity) {
+      serviceData.tableCapacity = Number(req.body.tableCapacity);
+    }
+    if (serviceType === 'TourPackage') {
+      if (req.body.durationDays) serviceData.durationDays = Number(req.body.durationDays);
+      // Ensure includedItems is always an array
+      if (req.body.includedItems && !Array.isArray(req.body.includedItems)) {
+        serviceData.includedItems = [req.body.includedItems];
+      }
+    }
+
     const newService = await Service.create(serviceData);
 
     res.status(201).json({ 
@@ -163,7 +172,8 @@ export const createService = async (req, res) => {
       service: newService 
     });
   } catch (error) {
-    res.status(400).json({ message: 'Invalid service data', error: error.message });
+    console.error('Create Service Error:', error);
+    res.status(400).json({ message: error.message || 'Error creating service' });
   }
 };
 
@@ -177,32 +187,46 @@ export const updateService = async (req, res) => {
       return res.status(404).json({ message: 'Service not found' });
     }
 
-    // SECURITY CHECK: Ensure the requester is the owner OR an Admin
     if (service.ownerId.toString() !== req.user._id.toString() && req.user.role !== 'Admin') {
       return res.status(403).json({ message: 'Not authorized to update this service' });
     }
 
-    // Prevent updating discriminator key (throws Mongoose error)
-    if (req.body.serviceType) {
-        delete req.body.serviceType;
-    }
+    const updateData = { ...req.body };
 
-    // Handle new image uploads — replace existing images if new ones are provided
+    // Prevent restricted fields
+    delete updateData.serviceType;
+    delete updateData.status;
+    delete updateData.ownerId;
+
+    // Handle images
     if (req.files && req.files.length > 0) {
-      req.body.images = req.files.map(file => file.path);
+      updateData.images = req.files.map(file => file.path || file.secure_url || file.url);
     }
 
-    service = await Service.findByIdAndUpdate(req.params.id, req.body, {
-      returnDocument: 'after',
-      runValidators: true
-    }).populate('ownerId', 'name companyName');
+    // Cast numeric fields
+    if (updateData.price) updateData.price = Number(updateData.price);
+    if (updateData.capacity) updateData.capacity = Number(updateData.capacity);
+    if (updateData.tableCapacity) updateData.tableCapacity = Number(updateData.tableCapacity);
+    if (updateData.durationDays) updateData.durationDays = Number(updateData.durationDays);
+
+    // Handle array fields
+    if (updateData.includedItems && !Array.isArray(updateData.includedItems)) {
+      updateData.includedItems = [updateData.includedItems];
+    }
+
+    const updatedService = await Service.findByIdAndUpdate(
+      req.params.id, 
+      updateData, 
+      { new: true, runValidators: true }
+    ).populate('ownerId', 'name companyName');
 
     res.status(200).json({ 
       message: 'Service updated successfully', 
-      service 
+      service: updatedService 
     });
   } catch (error) {
-    res.status(400).json({ message: 'Error updating service', error: error.message });
+    console.error('Update Service Error:', error);
+    res.status(400).json({ message: error.message || 'Error updating service' });
   }
 };
 
@@ -228,7 +252,37 @@ export const deleteService = async (req, res) => {
   }
 };
 
-// @desc    Get services by type (Restaurants, Rentals, Tour Packages)
+// @desc    Approve or Reject a service
+// @route   PUT /api/services/:id/status
+// @access  Private (Admin only)
+export const updateServiceStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid status. Must be approved or rejected.' });
+    }
+
+    const service = await Service.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true, runValidators: true }
+    ).populate('ownerId', 'name companyName email');
+
+    if (!service) {
+      return res.status(404).json({ message: 'Service not found' });
+    }
+
+    res.status(200).json({
+      message: `Service ${status} successfully`,
+      service
+    });
+  } catch (error) {
+    res.status(400).json({ message: 'Error updating service status', error: error.message });
+  }
+};
+
+// @desc    Get services by ownertype (Restaurants, Rentals, Tour Packages)
 // @route   GET /api/services/type/:serviceType
 // @access  Public
 export const getServicesByType = async (req, res) => {

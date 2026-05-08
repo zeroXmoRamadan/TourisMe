@@ -1,240 +1,250 @@
-import React, { useState, useEffect, useRef } from 'react';
-import gsap from 'gsap';
-import { Users, Search, Shield, Store, User, Trash2, X, Edit2, Save, Mail, Phone, Calendar, ChevronDown } from 'lucide-react';
-import { secureStorage } from '../../utils/security';
-import { useAuth } from '../../contexts/AuthContext';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Ban, CheckCircle, Mail, Search, Shield, User, Users } from 'lucide-react';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Alert from '../../components/common/Alert';
+import adminService from '../../services/adminService';
+import { useAuth } from '../../contexts/AuthContext';
 
-const USERS_KEY = 'luxor_users';
+const PAGE_SIZE = 10;
 
 const AdminUsers = () => {
     const { user: currentUser } = useAuth();
     const [users, setUsers] = useState([]);
     const [search, setSearch] = useState('');
-    const [roleFilter, setRoleFilter] = useState('all');
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+    const [totalUsers, setTotalUsers] = useState(0);
+    const [loading, setLoading] = useState(false);
     const [alert, setAlert] = useState(null);
-    const [deleteConfirm, setDeleteConfirm] = useState(null);
-    const [editingUser, setEditingUser] = useState(null);
-    const headerRef = useRef(null);
-    const contentRef = useRef(null);
-
-    const loadUsers = () => {
-        const allUsers = secureStorage.getItem(USERS_KEY) || [];
-        // Remove password from display
-        setUsers(allUsers.map(u => ({ ...u, password: undefined })));
-    };
-
-    useEffect(() => { loadUsers(); }, []);
+    const [suspendTarget, setSuspendTarget] = useState(null); // { user, action: 'suspend'|'unsuspend' }
 
     useEffect(() => {
-        gsap.fromTo(headerRef.current, { opacity: 0, y: -30 }, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' });
-        gsap.fromTo(contentRef.current, { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.6, delay: 0.2, ease: 'power3.out' });
-    }, []);
+        const timeout = setTimeout(() => loadUsers(page, search), 350);
+        return () => clearTimeout(timeout);
+    }, [page, search]);
 
-    const filteredUsers = users.filter(u => {
-        const matchesSearch = search === '' ||
-            (`${u.firstName} ${u.lastName}`).toLowerCase().includes(search.toLowerCase()) ||
-            u.email.toLowerCase().includes(search.toLowerCase());
-        const matchesRole = roleFilter === 'all' || u.role === roleFilter;
-        return matchesSearch && matchesRole;
-    });
-
-    const changeRole = (userId, newRole) => {
-        if (userId === currentUser.id) {
-            setAlert({ type: 'error', message: "You can't change your own role" });
-            setTimeout(() => setAlert(null), 3000);
-            return;
+    const loadUsers = async (targetPage = page, query = search) => {
+        setLoading(true);
+        const result = await adminService.getUsers({
+            page: targetPage,
+            limit: PAGE_SIZE,
+            search: query || undefined,
+        });
+        if (result.success) {
+            setUsers(result.users || []);
+            setTotalPages(result.totalPages || 1);
+            setTotalUsers(result.totalUsers || 0);
+        } else {
+            setAlert({ type: 'error', message: result.error });
         }
-        const allUsers = secureStorage.getItem(USERS_KEY) || [];
-        const index = allUsers.findIndex(u => u.id === userId);
-        if (index === -1) return;
-        allUsers[index].role = newRole;
-        if (newRole === 'vendor' && !allUsers[index].companyName) {
-            allUsers[index].companyName = '';
+        setLoading(false);
+    };
+
+    const roleCounts = useMemo(() => ({
+        Admin: users.filter((u) => u.role === 'Admin').length,
+        LocalBusinessOwner: users.filter((u) => u.role === 'LocalBusinessOwner').length,
+        Tourist: users.filter((u) => u.role === 'Tourist').length,
+    }), [users]);
+
+    const handleToggleSuspend = async () => {
+        if (!suspendTarget) return;
+        const { user: target } = suspendTarget;
+        const result = await adminService.toggleSuspend(target._id);
+        if (result.success) {
+            // Optimistically update the row in-place — no full reload needed
+            setUsers((prev) =>
+                prev.map((u) =>
+                    u._id === target._id ? { ...u, isSuspended: result.isSuspended } : u
+                )
+            );
+            const verb = result.isSuspended ? 'suspended' : 'unsuspended';
+            setAlert({ type: 'success', message: `${target.firstName} ${target.lastName} has been ${verb}.` });
+            setSuspendTarget(null);
+        } else {
+            setAlert({ type: 'error', message: result.error });
+            setSuspendTarget(null);
         }
-        secureStorage.setItem(USERS_KEY, allUsers);
-        loadUsers();
-        setAlert({ type: 'success', message: `User role changed to ${newRole}` });
-        setTimeout(() => setAlert(null), 3000);
-    };
-
-    const deleteUser = (userId) => {
-        if (userId === currentUser.id) {
-            setAlert({ type: 'error', message: "You can't delete your own account" });
-            setDeleteConfirm(null);
-            setTimeout(() => setAlert(null), 3000);
-            return;
-        }
-        const allUsers = secureStorage.getItem(USERS_KEY) || [];
-        const filtered = allUsers.filter(u => u.id !== userId);
-        secureStorage.setItem(USERS_KEY, filtered);
-        loadUsers();
-        setDeleteConfirm(null);
-        setAlert({ type: 'success', message: 'User deleted' });
-        setTimeout(() => setAlert(null), 3000);
-    };
-
-    const updateUser = (userId, updates) => {
-        const allUsers = secureStorage.getItem(USERS_KEY) || [];
-        const index = allUsers.findIndex(u => u.id === userId);
-        if (index === -1) return;
-        allUsers[index] = { ...allUsers[index], ...updates };
-        secureStorage.setItem(USERS_KEY, allUsers);
-        loadUsers();
-        setEditingUser(null);
-        setAlert({ type: 'success', message: 'User updated' });
-        setTimeout(() => setAlert(null), 3000);
-    };
-
-    const roleBadge = (role) => {
-        const styles = { admin: 'bg-purple-500/10 text-purple-400', vendor: 'bg-blue-500/10 text-blue-400', user: 'bg-green-500/10 text-green-400' };
-        const icons = { admin: Shield, vendor: Store, user: User };
-        const Icon = icons[role] || User;
-        return (
-            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${styles[role] || styles.user}`}>
-                <Icon className="w-3 h-3" />{role.charAt(0).toUpperCase() + role.slice(1)}
-            </span>
-        );
-    };
-
-    const counts = {
-        all: users.length,
-        admin: users.filter(u => u.role === 'admin').length,
-        vendor: users.filter(u => u.role === 'vendor').length,
-        user: users.filter(u => u.role === 'user').length,
     };
 
     return (
-        <div className="min-h-screen bg-dark-900 pt-20 pb-12">
+        <div className="min-h-screen bg-dark-900 pt-24 pb-16">
             <div className="container-custom max-w-6xl">
-                <div ref={headerRef} className="mb-8">
+                <div className="mb-8">
                     <h1 className="text-4xl font-display font-bold text-white mb-2">
-                        User <span className="bg-gradient-to-r from-primary-400 to-secondary-500 bg-clip-text text-transparent">Management</span>
+                        User &amp; <span className="bg-gradient-to-r from-primary-400 to-secondary-500 bg-clip-text text-transparent">Role Management</span>
                     </h1>
-                    <p className="text-white/50">Manage all platform users - tourists, vendors, and administrators</p>
+                    <p className="text-white/50">Search users and manage account status from one moderation table.</p>
 
-                    {/* Stats */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-                        {[
-                            { label: 'Total Users', value: counts.all, icon: Users, color: 'primary' },
-                            { label: 'Admins', value: counts.admin, icon: Shield, color: 'purple' },
-                            { label: 'Vendors', value: counts.vendor, icon: Store, color: 'blue' },
-                            { label: 'Tourists', value: counts.user, icon: User, color: 'green' },
-                        ].map((s, i) => {
-                            const Icon = s.icon;
-                            return (
-                                <Card key={i} className="text-center">
-                                    <Icon className={`w-6 h-6 mx-auto mb-2 ${s.color === 'primary' ? 'text-primary-400' : s.color === 'purple' ? 'text-purple-400' : s.color === 'blue' ? 'text-blue-400' : 'text-green-400'}`} />
-                                    <p className="text-2xl font-bold text-white">{s.value}</p>
-                                    <p className="text-xs text-white/40">{s.label}</p>
-                                </Card>
-                            );
-                        })}
+                        <Card className="text-center"><Users className="w-5 h-5 mx-auto text-primary-400 mb-2" /><p className="text-xl text-white font-bold">{totalUsers}</p><p className="text-xs text-white/40">Total</p></Card>
+                        <Card className="text-center"><Shield className="w-5 h-5 mx-auto text-red-400 mb-2" /><p className="text-xl text-white font-bold">{roleCounts.Admin}</p><p className="text-xs text-white/40">Admins</p></Card>
+                        <Card className="text-center"><User className="w-5 h-5 mx-auto text-blue-400 mb-2" /><p className="text-xl text-white font-bold">{roleCounts.LocalBusinessOwner}</p><p className="text-xs text-white/40">Business Owners</p></Card>
+                        <Card className="text-center"><User className="w-5 h-5 mx-auto text-green-400 mb-2" /><p className="text-xl text-white font-bold">{roleCounts.Tourist}</p><p className="text-xs text-white/40">Tourists</p></Card>
                     </div>
                 </div>
 
                 {alert && <Alert type={alert.type} message={alert.message} onClose={() => setAlert(null)} className="mb-6" />}
 
-                <div ref={contentRef}>
-                    {/* Search & Filter */}
-                    <div className="flex flex-col md:flex-row gap-4 mb-6">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/40 z-10" />
-                            <input type="text" placeholder="Search by name or email..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full pl-10 pr-4 py-3 bg-dark-700/50 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all duration-300" />
-                        </div>
-                        <div className="flex gap-2">
-                            {['all', 'admin', 'vendor', 'user'].map(r => (
-                                <button key={r} onClick={() => setRoleFilter(r)} className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-300 ${roleFilter === r ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30' : 'bg-dark-700/50 text-white/50 border border-white/5 hover:bg-white/5'}`}>
-                                    {r.charAt(0).toUpperCase() + r.slice(1)} ({counts[r]})
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Users Table */}
-                    <Card>
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead>
-                                    <tr className="border-b border-white/10">
-                                        <th className="text-left py-4 px-4 text-white/60 font-medium text-sm">User</th>
-                                        <th className="text-left py-4 px-4 text-white/60 font-medium text-sm">Contact</th>
-                                        <th className="text-left py-4 px-4 text-white/60 font-medium text-sm">Role</th>
-                                        <th className="text-left py-4 px-4 text-white/60 font-medium text-sm">Joined</th>
-                                        <th className="text-right py-4 px-4 text-white/60 font-medium text-sm">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredUsers.map((u) => (
-                                        <tr key={u.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
-                                            <td className="py-4 px-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                                                        {u.firstName?.[0]}{u.lastName?.[0]}
-                                                    </div>
-                                                    <div>
-                                                        <p className="font-semibold text-white text-sm">{u.firstName} {u.lastName}</p>
-                                                        {u.companyName && <p className="text-xs text-blue-400">{u.companyName}</p>}
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="py-4 px-4">
-                                                <p className="text-sm text-white/70 flex items-center gap-1"><Mail className="w-3 h-3" />{u.email}</p>
-                                                <p className="text-xs text-white/40 flex items-center gap-1 mt-1"><Phone className="w-3 h-3" />{u.phone || 'N/A'}</p>
-                                            </td>
-                                            <td className="py-4 px-4">
-                                                <div className="relative group inline-block">
-                                                    {roleBadge(u.role)}
-                                                    {u.id !== currentUser.id && (
-                                                        <div className="hidden group-hover:block absolute top-full left-0 mt-1 z-20 bg-dark-700 border border-white/10 rounded-xl shadow-lg overflow-hidden min-w-[120px]">
-                                                            {['user', 'vendor', 'admin'].filter(r => r !== u.role).map(r => (
-                                                                <button key={r} onClick={() => changeRole(u.id, r)} className="block w-full text-left px-4 py-2 text-sm text-white/70 hover:bg-white/10 transition-colors capitalize">{r}</button>
-                                                            ))}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="py-4 px-4">
-                                                <span className="text-sm text-white/50 flex items-center gap-1"><Calendar className="w-3 h-3" />{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : 'N/A'}</span>
-                                            </td>
-                                            <td className="py-4 px-4">
-                                                <div className="flex items-center justify-end gap-2">
-                                                    <button onClick={() => setEditingUser(u)} className="p-2 hover:bg-primary-500/10 rounded-lg transition-colors" title="Edit"><Edit2 className="w-4 h-4 text-primary-400" /></button>
-                                                    {u.id !== currentUser.id && (
-                                                        <button onClick={() => setDeleteConfirm(u.id)} className="p-2 hover:bg-red-500/10 rounded-lg transition-colors" title="Delete"><Trash2 className="w-4 h-4 text-red-400" /></button>
-                                                    )}
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                            {filteredUsers.length === 0 && (
-                                <div className="text-center py-12"><Users className="w-12 h-12 text-white/10 mx-auto mb-3" /><p className="text-white/40">No users found</p></div>
-                            )}
-                        </div>
-                    </Card>
+                <div className="relative mb-6">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40 w-5 h-5" />
+                    <input
+                        value={search}
+                        onChange={(e) => {
+                            setPage(1);
+                            setSearch(e.target.value);
+                        }}
+                        placeholder="Search by full name, company, or email..."
+                        className="w-full pl-10 pr-4 py-3 bg-dark-700/50 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary-500/40"
+                    />
                 </div>
 
-                {/* Edit Modal */}
-                {editingUser && (
-                    <EditUserModal user={editingUser} onSave={updateUser} onClose={() => setEditingUser(null)} isCurrentUser={editingUser.id === currentUser.id} />
-                )}
+                <Card>
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead>
+                                <tr className="border-b border-white/10">
+                                    <th className="text-left py-4 px-3 text-white/60 text-sm">User</th>
+                                    <th className="text-left py-4 px-3 text-white/60 text-sm">Role</th>
+                                    <th className="text-left py-4 px-3 text-white/60 text-sm">Status</th>
+                                    <th className="text-left py-4 px-3 text-white/60 text-sm">Joined</th>
+                                    <th className="text-right py-4 px-3 text-white/60 text-sm">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {users.map((u) => (
+                                    <tr key={u._id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
+                                        <td className="py-4 px-3">
+                                            <p className="text-white font-medium">
+                                                {u.role === 'LocalBusinessOwner' && u.companyName 
+                                                    ? u.companyName 
+                                                    : `${u.firstName} ${u.lastName}`
+                                                }
+                                            </p>
+                                            <div className="flex flex-col gap-0.5 mt-1">
+                                                <p className="text-white/50 text-xs flex items-center gap-1">
+                                                    <Mail className="w-3 h-3" />
+                                                    {u.email}
+                                                </p>
+                                                {u.role === 'LocalBusinessOwner' && u.companyName && (
+                                                    <p className="text-white/50 text-xs pl-4">
+                                                        {u.firstName} {u.lastName}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td className="py-4 px-3">
+                                            <span className="text-xs px-2.5 py-1 rounded-full bg-primary-500/15 text-primary-300 border border-primary-500/20">
+                                                {u.role}
+                                            </span>
+                                        </td>
+                                        <td className="py-4 px-3">
+                                            {u.isSuspended ? (
+                                                <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/25">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                                                    Suspended
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-green-500/15 text-green-400 border border-green-500/25">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
+                                                    Active
+                                                </span>
+                                            )}
+                                        </td>
+                                        <td className="py-4 px-3 text-white/60 text-sm">{new Date(u.createdAt).toLocaleDateString()}</td>
+                                        <td className="py-4 px-3 text-right">
+                                            {u._id !== currentUser?._id && u.role !== 'Admin' ? (
+                                                u.isSuspended ? (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => setSuspendTarget({ user: u, action: 'unsuspend' })}
+                                                        className="inline-flex items-center gap-2 !text-green-400 hover:!bg-green-500/10 border border-green-500/20"
+                                                    >
+                                                        <CheckCircle className="w-4 h-4" />
+                                                        Unsuspend
+                                                    </Button>
+                                                ) : (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => setSuspendTarget({ user: u, action: 'suspend' })}
+                                                        className="inline-flex items-center gap-2 !text-amber-400 hover:!bg-amber-500/10 border border-amber-500/20"
+                                                    >
+                                                        <Ban className="w-4 h-4" />
+                                                        Suspend
+                                                    </Button>
+                                                )
+                                            ) : (
+                                                <span className="text-white/30 text-sm">Protected</span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        {!loading && users.length === 0 && <p className="text-center py-10 text-white/40">No users found.</p>}
+                    </div>
+                </Card>
 
-                {/* Delete Confirm */}
-                {deleteConfirm && (
+                <div className="flex items-center justify-between mt-6">
+                    <p className="text-white/50 text-sm">Page {page} of {totalPages}</p>
+                    <div className="flex gap-2">
+                        <Button variant="ghost" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>Previous</Button>
+                        <Button variant="ghost" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>Next</Button>
+                    </div>
+                </div>
+
+                {/* Suspend / Unsuspend confirmation modal */}
+                {suspendTarget && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-                        <div className="fixed inset-0 bg-dark-900/80 backdrop-blur-sm" onClick={() => setDeleteConfirm(null)} />
-                        <Card className="relative z-10 w-full max-w-md text-center">
-                            <Trash2 className="w-12 h-12 text-red-400 mx-auto mb-4" />
-                            <h3 className="text-xl font-bold text-white mb-2">Delete User?</h3>
-                            <p className="text-white/50 mb-6">This will permanently remove the user and all their data.</p>
-                            <div className="flex gap-3 justify-center">
-                                <Button variant="danger" onClick={() => deleteUser(deleteConfirm)}>Delete</Button>
-                                <Button variant="ghost" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
-                            </div>
+                        <div className="absolute inset-0 bg-dark-900/80 backdrop-blur-sm" onClick={() => setSuspendTarget(null)} />
+                        <Card className="relative z-10 w-full max-w-md">
+                            {suspendTarget.action === 'suspend' ? (
+                                <>
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <div className="w-10 h-10 rounded-full bg-amber-500/15 flex items-center justify-center">
+                                            <Ban className="w-5 h-5 text-amber-400" />
+                                        </div>
+                                        <h3 className="text-xl font-bold text-white">Suspend this account?</h3>
+                                    </div>
+                                    <p className="text-white/50 mb-6">
+                                        <span className="text-white">{suspendTarget.user.firstName} {suspendTarget.user.lastName}</span> will be immediately logged out and blocked from accessing the platform. You can reverse this at any time.
+                                    </p>
+                                    <div className="flex gap-3">
+                                        <Button
+                                            size="sm"
+                                            className="!bg-amber-500 hover:!bg-amber-600 !text-white"
+                                            onClick={handleToggleSuspend}
+                                        >
+                                            Confirm Suspend
+                                        </Button>
+                                        <Button variant="ghost" size="sm" onClick={() => setSuspendTarget(null)}>Cancel</Button>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="flex items-center gap-3 mb-3">
+                                        <div className="w-10 h-10 rounded-full bg-green-500/15 flex items-center justify-center">
+                                            <CheckCircle className="w-5 h-5 text-green-400" />
+                                        </div>
+                                        <h3 className="text-xl font-bold text-white">Unsuspend this account?</h3>
+                                    </div>
+                                    <p className="text-white/50 mb-6">
+                                        <span className="text-white">{suspendTarget.user.firstName} {suspendTarget.user.lastName}</span> will regain full access to the platform immediately.
+                                    </p>
+                                    <div className="flex gap-3">
+                                        <Button
+                                            size="sm"
+                                            className="!bg-green-600 hover:!bg-green-700 !text-white"
+                                            onClick={handleToggleSuspend}
+                                        >
+                                            Confirm Unsuspend
+                                        </Button>
+                                        <Button variant="ghost" size="sm" onClick={() => setSuspendTarget(null)}>Cancel</Button>
+                                    </div>
+                                </>
+                            )}
                         </Card>
                     </div>
                 )}
@@ -243,74 +253,5 @@ const AdminUsers = () => {
     );
 };
 
-const EditUserModal = ({ user, onSave, onClose, isCurrentUser }) => {
-    const [form, setForm] = useState({
-        firstName: user.firstName || '',
-        lastName: user.lastName || '',
-        email: user.email || '',
-        phone: user.phone || '',
-        companyName: user.companyName || '',
-        role: user.role || 'user',
-    });
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        const updates = { ...form };
-        if (isCurrentUser) delete updates.role;
-        onSave(user.id, updates);
-    };
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-            <div className="fixed inset-0 bg-dark-900/80 backdrop-blur-sm" onClick={onClose} />
-            <Card className="relative z-10 w-full max-w-lg">
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-bold text-white flex items-center gap-3"><Edit2 className="w-5 h-5 text-primary-400" />Edit User</h2>
-                    <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-lg transition-colors"><X className="w-5 h-5 text-white/60" /></button>
-                </div>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium mb-2 text-white/80">First Name</label>
-                            <input type="text" value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} className="w-full px-4 py-3 bg-dark-700/50 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all duration-300" required />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium mb-2 text-white/80">Last Name</label>
-                            <input type="text" value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} className="w-full px-4 py-3 bg-dark-700/50 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all duration-300" required />
-                        </div>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-2 text-white/80">Email</label>
-                        <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="w-full px-4 py-3 bg-dark-700/50 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all duration-300" required />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-2 text-white/80">Phone</label>
-                        <input type="tel" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="w-full px-4 py-3 bg-dark-700/50 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all duration-300" />
-                    </div>
-                    {(form.role === 'vendor' || user.role === 'vendor') && (
-                        <div>
-                            <label className="block text-sm font-medium mb-2 text-white/80">Company Name</label>
-                            <input type="text" value={form.companyName} onChange={(e) => setForm({ ...form, companyName: e.target.value })} className="w-full px-4 py-3 bg-dark-700/50 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all duration-300" placeholder="Tourism company name" />
-                        </div>
-                    )}
-                    {!isCurrentUser && (
-                        <div>
-                            <label className="block text-sm font-medium mb-2 text-white/80">Role</label>
-                            <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className="w-full px-4 py-3 bg-dark-700/50 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all duration-300">
-                                <option value="user">Tourist</option>
-                                <option value="vendor">Vendor</option>
-                                <option value="admin">Admin</option>
-                            </select>
-                        </div>
-                    )}
-                    <div className="flex gap-3 pt-4">
-                        <Button type="submit" variant="primary" className="flex items-center gap-2"><Save className="w-4 h-4" />Save Changes</Button>
-                        <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
-                    </div>
-                </form>
-            </Card>
-        </div>
-    );
-};
-
 export default AdminUsers;
+

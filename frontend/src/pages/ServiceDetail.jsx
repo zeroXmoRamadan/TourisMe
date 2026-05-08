@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import {
-    Car, UtensilsCrossed, Landmark, Star, MapPin, ArrowLeft, Plus,
+    Car, UtensilsCrossed, Landmark, Star, MapPin, ArrowLeft, Plus, Trash2,
     ChevronLeft, ChevronRight, User, Phone, Mail, Clock, Users,
     Utensils, Truck, Package, Loader2, AlertCircle, CheckCircle,
     DollarSign, Calendar
@@ -15,6 +15,7 @@ import { useAuth } from '../contexts/AuthContext';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import Alert from '../components/common/Alert';
+import ReviewSection from '../components/common/ReviewSection';
 
 /* ─── Static config ─────────────────────────────────── */
 const TYPE_CONFIG = {
@@ -234,7 +235,7 @@ const TourPackageDetails = ({ service }) => (
 const ServiceDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    const { user, isAuthenticated } = useAuth();
+    const { user, isAuthenticated, isAdmin } = useAuth();
 
     const [service, setService] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -251,17 +252,43 @@ const ServiceDetail = () => {
     const [bookLoading, setBookLoading] = useState(false);
     const [bookingDone, setBookingDone] = useState(null);
 
-    // Review state
-    const [reviews, setReviews] = useState([]);
-    const [reviewStats, setReviewStats] = useState(null);
-    const [myReview, setMyReview] = useState(null);
-    const [reviewRating, setReviewRating] = useState(0);
-    const [reviewHover, setReviewHover] = useState(0);
-    const [reviewComment, setReviewComment] = useState('');
-    const [reviewLoading, setReviewLoading] = useState(false);
-    const [reviewsLoading, setReviewsLoading] = useState(true); // holds created booking on success
-
+    const heroRef = useRef(null);
+    const contentRef = useRef(null);
+    const sidebarRef = useRef(null);
     const pageRef = useRef(null);
+
+    /* ── Animations ── */
+    useEffect(() => {
+        if (!service) return;
+
+        gsap.fromTo(pageRef.current,
+            { opacity: 0 },
+            { opacity: 1, duration: 0.8, ease: 'power2.out' }
+        );
+
+        gsap.fromTo(heroRef.current,
+            { opacity: 0, y: 20 },
+            { opacity: 1, y: 0, duration: 0.8, delay: 0.2, ease: 'power3.out' }
+        );
+
+        const contentCards = contentRef.current?.querySelectorAll('.detail-card');
+        if (contentCards && contentCards.length > 0) {
+            gsap.fromTo(contentCards,
+                { opacity: 0, y: 30 },
+                {
+                    opacity: 1, y: 0,
+                    duration: 0.8, stagger: 0.15, delay: 0.4, ease: 'power3.out'
+                }
+            );
+        }
+
+        if (sidebarRef.current) {
+            gsap.fromTo(sidebarRef.current,
+                { opacity: 0, x: 30 },
+                { opacity: 1, x: 0, duration: 0.8, delay: 0.6, ease: 'power3.out' }
+            );
+        }
+    }, [service]);
 
     useEffect(() => {
         const fetch = async () => {
@@ -276,39 +303,6 @@ const ServiceDetail = () => {
         };
         fetch();
     }, [id]);
-
-    // Fetch reviews for this service
-    useEffect(() => {
-        if (!service) return;
-        const fetchReviews = async () => {
-            setReviewsLoading(true);
-            const result = await reviewsService.getByTarget(service._id, { limit: 50 });
-            if (result.success) {
-                setReviews(result.reviews || []);
-                setReviewStats(result.stats || null);
-            }
-            // Check if logged-in user has already reviewed
-            if (isAuthenticated) {
-                const check = await reviewsService.checkUserReview(service._id);
-                if (check.hasReviewed && check.review) {
-                    setMyReview(check.review);
-                    setReviewRating(check.review.rating);
-                    setReviewComment(check.review.comment || '');
-                }
-            }
-            setReviewsLoading(false);
-        };
-        fetchReviews();
-    }, [service, isAuthenticated]);
-
-    useEffect(() => {
-        if (!loading && service && pageRef.current) {
-            gsap.fromTo(pageRef.current,
-                { opacity: 0, y: 20 },
-                { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' }
-            );
-        }
-    }, [loading, service]);
 
     const handleAddToTrip = async () => {
         if (!isAuthenticated) { navigate('/login'); return; }
@@ -397,6 +391,38 @@ const ServiceDetail = () => {
         setTimeout(() => setAlert(null), 4000);
     };
 
+    const handleReviewDelete = async (reviewId) => {
+        if (!window.confirm('Delete this review?')) return;
+        const result = await reviewsService.delete(reviewId);
+        if (result.success) {
+            setAlert({ type: 'success', message: 'Review deleted successfully.' });
+            if (myReview?._id === reviewId) {
+                setMyReview(null);
+                setReviewRating(0);
+                setReviewComment('');
+            }
+            const fresh = await reviewsService.getByTarget(service._id, { limit: 50 });
+            if (fresh.success) {
+                setReviews(fresh.reviews || []);
+                setReviewStats(fresh.stats || null);
+            }
+        } else {
+            setAlert({ type: 'error', message: result.error });
+        }
+        setTimeout(() => setAlert(null), 4000);
+    };
+
+    const handleDeleteService = async () => {
+        if (!window.confirm(`Are you sure you want to delete "${service.name}" permanently?`)) return;
+        const result = await individualServicesService.delete(service._id);
+        if (result.success) {
+            navigate('/admin/services', { state: { message: 'Service deleted successfully.' } });
+        } else {
+            setAlert({ type: 'error', message: result.error });
+            setTimeout(() => setAlert(null), 4000);
+        }
+    };
+
     /* ── Derived config ── */
     const typeKey = service?.serviceType;
     const cfg = TYPE_CONFIG[typeKey] || TYPE_CONFIG.TourPackage;
@@ -442,7 +468,7 @@ const ServiceDetail = () => {
                     <div className="lg:col-span-2 space-y-6">
 
                         {/* Type badge + title */}
-                        <div>
+                        <div ref={heroRef}>
                             <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${cfg.badge} mb-3`}>
                                 <TypeIcon className="w-3.5 h-3.5" />
                                 {cfg.label}
@@ -457,118 +483,31 @@ const ServiceDetail = () => {
                         <Gallery images={service.images} />
 
                         {/* Description */}
-                        {service.description && (
-                            <Card className="space-y-2">
-                                <h2 className="text-lg font-bold text-white">About this Service</h2>
-                                <p className="text-white/60 leading-relaxed">{service.description}</p>
+                        <div ref={contentRef} className="space-y-6">
+                            {service.description && (
+                                <Card className="detail-card">
+                                    <h2 className="text-lg font-bold text-white mb-4">About this Service</h2>
+                                    <p className="text-white/60 leading-relaxed">{service.description}</p>
+                                </Card>
+                            )}
+
+                            {/* Type-specific details */}
+                            <Card className="detail-card">
+                                <h2 className="text-lg font-bold text-white mb-4">Service Details</h2>
+                                <div className="space-y-1">
+                                    {typeKey === 'Restaurant' && <RestaurantDetails service={service} />}
+                                    {typeKey === 'Rental' && <RentalDetails service={service} />}
+                                    {typeKey === 'TourPackage' && <TourPackageDetails service={service} />}
+                                </div>
                             </Card>
-                        )}
 
-                        {/* Type-specific details */}
-                        <Card>
-                            <h2 className="text-lg font-bold text-white mb-4">Details</h2>
-                            {typeKey === 'Restaurant' && <RestaurantDetails service={service} />}
-                            {typeKey === 'Rental' && <RentalDetails service={service} />}
-                            {typeKey === 'TourPackage' && <TourPackageDetails service={service} />}
-                        </Card>
-
-                        {/* ═══════════ REVIEWS SECTION ═══════════ */}
-                        <Card>
-                            <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                                <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
-                                Reviews {reviewStats ? `(${reviewStats.totalReviews})` : ''}
-                            </h2>
-
-                            {/* Write / Edit review form */}
-                            {isAuthenticated && user?.role === 'Tourist' && (
-                                <form onSubmit={handleReviewSubmit} className="mb-6 p-4 bg-white/5 rounded-xl border border-white/10">
-                                    <p className="text-sm font-medium text-white/70 mb-2">
-                                        {myReview ? 'Update your review' : 'Write a review'}
-                                    </p>
-                                    {/* Star picker */}
-                                    <div className="flex items-center gap-1 mb-3">
-                                        {[1, 2, 3, 4, 5].map(s => (
-                                            <button
-                                                key={s}
-                                                type="button"
-                                                onClick={() => setReviewRating(s)}
-                                                onMouseEnter={() => setReviewHover(s)}
-                                                onMouseLeave={() => setReviewHover(0)}
-                                                className="p-0.5 transition-transform hover:scale-125"
-                                            >
-                                                <Star
-                                                    className={`w-7 h-7 transition-colors ${s <= (reviewHover || reviewRating)
-                                                            ? 'text-yellow-400 fill-yellow-400'
-                                                            : 'text-white/20'
-                                                        }`}
-                                                />
-                                            </button>
-                                        ))}
-                                        {reviewRating > 0 && (
-                                            <span className="ml-2 text-sm text-white/50">
-                                                {['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'][reviewRating]}
-                                            </span>
-                                        )}
-                                    </div>
-                                    <textarea
-                                        value={reviewComment}
-                                        onChange={e => setReviewComment(e.target.value)}
-                                        rows={3}
-                                        placeholder="Share your experience…"
-                                        className="w-full px-3 py-2.5 bg-dark-700/60 border border-white/10 rounded-xl text-white text-sm placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-yellow-500/40 resize-none mb-3"
-                                    />
-                                    <button
-                                        type="submit"
-                                        disabled={reviewLoading || !reviewRating}
-                                        className="px-5 py-2 rounded-xl bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-sm font-semibold hover:from-yellow-400 hover:to-orange-400 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                    >
-                                        {reviewLoading && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                                        {myReview ? 'Update Review' : 'Submit Review'}
-                                    </button>
-                                </form>
-                            )}
-
-                            {!isAuthenticated && (
-                                <p className="text-sm text-white/40 mb-6">
-                                    <button onClick={() => navigate('/login')} className="text-primary-400 hover:underline">Log in</button> to leave a review.
-                                </p>
-                            )}
-
-                            {/* Reviews list */}
-                            {reviewsLoading ? (
-                                <div className="flex justify-center py-8">
-                                    <Loader2 className="w-6 h-6 text-white/30 animate-spin" />
-                                </div>
-                            ) : reviews.length === 0 ? (
-                                <p className="text-white/40 text-sm py-4">No reviews yet. Be the first to share your experience!</p>
-                            ) : (
-                                <div className="space-y-4">
-                                    {reviews.map(r => (
-                                        <div key={r._id} className="flex gap-4 py-4 border-b border-white/5 last:border-0">
-                                            <div className="w-11 h-11 shrink-0 rounded-full bg-gradient-to-br from-primary-500 to-secondary-500 flex items-center justify-center text-white font-bold text-base">
-                                                {(r.touristId?.firstName || '?')[0].toUpperCase()}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between gap-2">
-                                                    <p className="text-white font-semibold text-base truncate">{r.touristId ? `${r.touristId.firstName} ${r.touristId.lastName}` : 'Tourist'}</p>
-                                                    <span className="text-sm text-white/30 shrink-0">{new Date(r.createdAt).toLocaleDateString()}</span>
-                                                </div>
-                                                <div className="flex items-center gap-0.5 my-1.5">
-                                                    {[1, 2, 3, 4, 5].map(s => (
-                                                        <Star key={s} className={`w-4.5 h-4.5 ${s <= r.rating ? 'text-yellow-400 fill-yellow-400' : 'text-white/15'}`} />
-                                                    ))}
-                                                </div>
-                                                {r.comment && <p className="text-white/60 text-base leading-relaxed">{r.comment}</p>}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </Card>
+                            {/* Reviews */}
+                            <ReviewSection targetType="Service" targetId={id} />
+                        </div>
                     </div>
 
                     {/* ═══════════ RIGHT SIDEBAR ═══════════ */}
-                    <div className="space-y-5">
+                    <div ref={sidebarRef} className="space-y-5">
 
                         {/* Price + CTA card */}
                         <Card className={`${cfg.glow}`}>
@@ -587,109 +526,131 @@ const ServiceDetail = () => {
                                 </div>
                             </div>
 
-                            <Button
-                                variant="primary"
-                                fullWidth
-                                onClick={handleAddToTrip}
-                                className="flex items-center justify-center gap-2 mb-3"
-                            >
-                                <Plus className="w-4 h-4" />
-                                Add to Trip
-                            </Button>
+                            {!isAdmin ? (
+                                <>
+                                    <Button
+                                        variant="primary"
+                                        fullWidth
+                                        onClick={handleAddToTrip}
+                                        className="flex items-center justify-center gap-2 mb-3"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                        Add to Trip
+                                    </Button>
 
-                            {!isAuthenticated && (
-                                <p className="text-center text-xs text-white/40">
-                                    <button onClick={() => navigate('/login')} className="text-primary-400 hover:underline">Log in</button> to save this to your trip
-                                </p>
+                                    {!isAuthenticated && (
+                                        <p className="text-center text-xs text-white/40">
+                                            <button onClick={() => navigate('/login')} className="text-primary-400 hover:underline">Log in</button> to save this to your trip
+                                        </p>
+                                    )}
+                                </>
+                            ) : (
+                                <div className="space-y-3">
+                                    <div className="p-3 bg-primary-500/10 border border-primary-500/20 rounded-xl">
+                                        <p className="text-primary-400 text-xs font-bold uppercase tracking-wider mb-1">Admin Mode</p>
+                                        <p className="text-white/70 text-sm">You are viewing this service as a moderator.</p>
+                                    </div>
+                                    <Button
+                                        variant="danger"
+                                        fullWidth
+                                        onClick={handleDeleteService}
+                                        className="flex items-center justify-center gap-2"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                        Delete Service
+                                    </Button>
+                                </div>
                             )}
                         </Card>
 
                         {/* ── Book Now card ── */}
-                        <Card className="border border-green-500/20 bg-green-500/5">
-                            <h3 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
-                                <Calendar className="w-5 h-5 text-green-400" />
-                                Book This Service
-                            </h3>
-                            <p className="text-xs text-white/40 mb-4">Instant booking — no credit card required upfront</p>
+                        {!isAdmin && (
+                            <Card className="border border-green-500/20 bg-green-500/5">
+                                <h3 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
+                                    <Calendar className="w-5 h-5 text-green-400" />
+                                    Book This Service
+                                </h3>
+                                <p className="text-xs text-white/40 mb-4">Instant booking — no credit card required upfront</p>
 
-                            {bookingDone ? (
-                                <div className="text-center py-4">
-                                    <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-3" />
-                                    <p className="text-white font-semibold mb-1">Booking Submitted!</p>
-                                    <p className="text-white/50 text-sm mb-4">Status: <span className="text-yellow-400 font-medium">Pending</span></p>
-                                    <button
-                                        onClick={() => navigate('/my-bookings')}
-                                        className="text-sm text-primary-400 hover:underline"
-                                    >
-                                        View My Bookings →
-                                    </button>
-                                </div>
-                            ) : (
-                                <form onSubmit={handleBook} className="space-y-4">
-                                    {/* Date */}
-                                    <div>
-                                        <label className="block text-xs text-white/50 mb-1">Service Date <span className="text-red-400">*</span></label>
-                                        <input
-                                            type="date"
-                                            min={minDateStr}
-                                            value={bookDate}
-                                            onChange={e => setBookDate(e.target.value)}
-                                            required
-                                            className="w-full px-3 py-2.5 bg-dark-700/60 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500/40 [color-scheme:dark]"
-                                        />
+                                {bookingDone ? (
+                                    <div className="text-center py-4">
+                                        <CheckCircle className="w-12 h-12 text-green-400 mx-auto mb-3" />
+                                        <p className="text-white font-semibold mb-1">Booking Submitted!</p>
+                                        <p className="text-white/50 text-sm mb-4">Status: <span className="text-yellow-400 font-medium">Pending</span></p>
+                                        <button
+                                            onClick={() => navigate('/my-bookings')}
+                                            className="text-sm text-primary-400 hover:underline"
+                                        >
+                                            View My Bookings →
+                                        </button>
                                     </div>
-
-                                    {/* Number of people */}
-                                    <div>
-                                        <label className="block text-xs text-white/50 mb-1">Number of People</label>
-                                        <div className="flex items-center gap-3">
-                                            <button type="button" onClick={() => setBookPeople(p => Math.max(1, p - 1))}
-                                                className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold transition-colors flex items-center justify-center text-lg">
-                                                −
-                                            </button>
-                                            <span className="flex-1 text-center text-white font-semibold text-lg">{bookPeople}</span>
-                                            <button type="button" onClick={() => setBookPeople(p => p + 1)}
-                                                className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold transition-colors flex items-center justify-center text-lg">
-                                                +
-                                            </button>
+                                ) : (
+                                    <form onSubmit={handleBook} className="space-y-4">
+                                        {/* Date */}
+                                        <div>
+                                            <label className="block text-xs text-white/50 mb-1">Service Date <span className="text-red-400">*</span></label>
+                                            <input
+                                                type="date"
+                                                min={minDateStr}
+                                                value={bookDate}
+                                                onChange={e => setBookDate(e.target.value)}
+                                                required
+                                                className="w-full px-3 py-2.5 bg-dark-700/60 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500/40 [color-scheme:dark]"
+                                            />
                                         </div>
-                                    </div>
 
-                                    {/* Special requests */}
-                                    <div>
-                                        <label className="block text-xs text-white/50 mb-1">Special Requests</label>
-                                        <textarea
-                                            value={bookNotes}
-                                            onChange={e => setBookNotes(e.target.value)}
-                                            rows={3}
-                                            placeholder="Any dietary needs, accessibility requirements…"
-                                            className="w-full px-3 py-2.5 bg-dark-700/60 border border-white/10 rounded-xl text-white text-sm placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500/40 resize-none"
-                                        />
-                                    </div>
+                                        {/* Number of people */}
+                                        <div>
+                                            <label className="block text-xs text-white/50 mb-1">Number of People</label>
+                                            <div className="flex items-center gap-3">
+                                                <button type="button" onClick={() => setBookPeople(p => Math.max(1, p - 1))}
+                                                    className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold transition-colors flex items-center justify-center text-lg">
+                                                    −
+                                                </button>
+                                                <span className="flex-1 text-center text-white font-semibold text-lg">{bookPeople}</span>
+                                                <button type="button" onClick={() => setBookPeople(p => p + 1)}
+                                                    className="w-8 h-8 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold transition-colors flex items-center justify-center text-lg">
+                                                    +
+                                                </button>
+                                            </div>
+                                        </div>
 
-                                    {/* Live price preview */}
-                                    <div className="flex items-center justify-between px-3 py-2.5 bg-white/5 rounded-xl border border-white/5">
-                                        <span className="text-white/60 text-sm">${service.price} × {bookPeople} person{bookPeople > 1 ? 's' : ''}</span>
-                                        <span className="text-white font-bold text-lg">${totalPrice}</span>
-                                    </div>
+                                        {/* Special requests */}
+                                        <div>
+                                            <label className="block text-xs text-white/50 mb-1">Special Requests</label>
+                                            <textarea
+                                                value={bookNotes}
+                                                onChange={e => setBookNotes(e.target.value)}
+                                                rows={3}
+                                                placeholder="Any dietary needs, accessibility requirements…"
+                                                className="w-full px-3 py-2.5 bg-dark-700/60 border border-white/10 rounded-xl text-white text-sm placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-green-500/50 focus:border-green-500/40 resize-none"
+                                            />
+                                        </div>
 
-                                    <button
-                                        type="submit"
-                                        disabled={bookLoading || !isAuthenticated}
-                                        className="w-full py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold hover:from-green-400 hover:to-emerald-500 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(34,197,94,0.3)]"
-                                    >
-                                        {bookLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Calendar className="w-4 h-4" />}
-                                        {bookLoading ? 'Booking…' : 'Confirm Booking'}
-                                    </button>
+                                        {/* Live price preview */}
+                                        <div className="flex items-center justify-between px-3 py-2.5 bg-white/5 rounded-xl border border-white/5">
+                                            <span className="text-white/60 text-sm">${service.price} × {bookPeople} person{bookPeople > 1 ? 's' : ''}</span>
+                                            <span className="text-white font-bold text-lg">${totalPrice}</span>
+                                        </div>
 
-                                    {!isAuthenticated && (
-                                        <p className="text-center text-xs text-white/40">
-                                            <button type="button" onClick={() => navigate('/login')} className="text-primary-400 hover:underline">Log in</button> to book
-                                        </p>
-                                    )}
-                                </form>
-                            )}
-                        </Card>
+                                        <button
+                                            type="submit"
+                                            disabled={bookLoading || !isAuthenticated}
+                                            className="w-full py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold hover:from-green-400 hover:to-emerald-500 transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-[0_4px_20px_rgba(34,197,94,0.3)]"
+                                        >
+                                            {bookLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Calendar className="w-4 h-4" />}
+                                            {bookLoading ? 'Booking…' : 'Confirm Booking'}
+                                        </button>
+
+                                        {!isAuthenticated && (
+                                            <p className="text-center text-xs text-white/40">
+                                                <button type="button" onClick={() => navigate('/login')} className="text-primary-400 hover:underline">Log in</button> to book
+                                            </p>
+                                        )}
+                                    </form>
+                                )}
+                            </Card>
+                        )}
 
                         {/* Vendor card */}
                         {vendor && (

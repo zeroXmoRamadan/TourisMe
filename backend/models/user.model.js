@@ -9,6 +9,7 @@ const userSchema = new Schema({
   passwordHash: { type: String, required: true }, 
   phone: { type: String }, 
   createdAt: { type: Date, default: Date.now },
+  isSuspended: { type: Boolean, default: false },
   role: { 
     type: String, 
     enum: ['Tourist', 'LocalBusinessOwner', 'Admin'], 

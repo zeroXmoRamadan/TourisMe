@@ -16,6 +16,7 @@ const Home = () => {
     const navigate = useNavigate();
     const [searchQuery, setSearchQuery] = useState('');
     const [popularServices, setPopularServices] = useState([]);
+    const [topAttractions, setTopAttractions] = useState([]);
 
     // Refs for GSAP animation
     const heroRef = useRef(null);
@@ -25,7 +26,15 @@ const Home = () => {
     const featuresRef = useRef(null);
     const ctaRef = useRef(null);
 
-    const topAttractions = attractionsService.getAll().slice(0, 3);
+    useEffect(() => {
+        const fetchTopAttractions = async () => {
+            const result = await attractionsService.getAll({ limit: 3, sort: '-averageRating' });
+            if (result.success) {
+                setTopAttractions(result.attractions);
+            }
+        };
+        fetchTopAttractions();
+    }, []);
 
     useEffect(() => {
         individualServicesService.getApproved().then((services) => {
@@ -476,10 +485,10 @@ const Home = () => {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                         {topAttractions.map((attraction) => (
-                            <div key={attraction.id} className="tour-card h-full">
-                                <Card hover padding={false} onClick={() => navigate(`/attractions/${attraction.id}`)} className="cursor-pointer h-full flex flex-col">
+                            <div key={attraction._id} className="tour-card h-full">
+                                <Card hover padding={false} onClick={() => navigate(`/attractions/${attraction._id}`)} className="cursor-pointer h-full flex flex-col">
                                     <div className="relative h-56 overflow-hidden">
-                                        <img src={attraction.image} alt={attraction.name} className="w-full h-full object-cover transform transition-transform duration-700 hover:scale-110" />
+                                        <img src={attraction.images?.[0] || 'https://images.unsplash.com/photo-1568322445389-f64ac2515020?w=600'} alt={attraction.name} className="w-full h-full object-cover transform transition-transform duration-700 hover:scale-110" />
                                         <div className="absolute inset-0 bg-gradient-to-t from-dark-900 via-transparent to-transparent" />
                                         <div className="absolute top-4 right-4">
                                             <span className="px-3 py-1 bg-dark-700/80 backdrop-blur-sm border border-white/10 rounded-full text-sm font-medium text-primary-400">{attraction.category}</span>
@@ -487,13 +496,16 @@ const Home = () => {
                                     </div>
                                     <div className="p-6 flex-1 flex flex-col">
                                         <h3 className="text-xl font-bold text-white mb-2">{attraction.name}</h3>
-                                        <p className="text-white/50 mb-4 line-clamp-2 flex-1">{attraction.shortDescription}</p>
+                                        <p className="text-white/50 mb-4 line-clamp-2 flex-1">{attraction.description}</p>
                                         <div className="flex items-center justify-between pt-4 border-t border-white/10">
                                             <div className="flex items-center gap-1">
                                                 <Star className="w-4 h-4 fill-primary-400 text-primary-400" />
-                                                <span className="font-semibold text-white/80">{attraction.rating}</span>
+                                                <span className="font-semibold text-white/80">{attraction.averageRating || 0}</span>
                                             </div>
-                                            <span className="text-sm text-white/50 flex items-center gap-1"><MapPin className="w-4 h-4" />{attraction.location}</span>
+                                            <span className="text-sm text-white/50 flex items-center gap-1">
+                                                <MapPin className="w-4 h-4" />
+                                                {typeof attraction.location === 'string' ? attraction.location : attraction.location?.address || 'Luxor'}
+                                            </span>
                                         </div>
                                     </div>
                                 </Card>

@@ -11,7 +11,7 @@ const DashboardRedirect = () => {
 
     // Map roles to dashboard routes
     const dashboardMap = {
-        Admin: '/dashboard/admin',
+        Admin: '/admin/dashboard',
         Tourist: '/dashboard/tourist',
         LocalBusinessOwner: '/dashboard/provider',
     };

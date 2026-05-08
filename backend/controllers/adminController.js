@@ -220,8 +220,10 @@ export const getAllUsers = async (req, res) => {
     if (role) query.role = role;
     if (search) {
       query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } }
+        { firstName: { $regex: search, $options: 'i' } },
+        { lastName: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { companyName: { $regex: search, $options: 'i' } }
       ];
     }
 
@@ -339,6 +341,38 @@ export const deleteUser = async (req, res) => {
   } catch (error) {
     res.status(500).json({ 
       message: 'Error deleting user', 
+      error: error.message 
+    });
+  }
+};
+
+// @desc    Toggle suspend/unsuspend a user
+// @route   PATCH /api/admin/users/:id/suspend
+// @access  Private (Admin only)
+export const toggleSuspend = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (user.role === 'Admin') {
+      return res.status(403).json({ message: 'Cannot suspend admin users' });
+    }
+
+    user.isSuspended = !user.isSuspended;
+    await user.save();
+
+    const action = user.isSuspended ? 'suspended' : 'unsuspended';
+    res.status(200).json({ 
+      message: `User ${action} successfully`,
+      isSuspended: user.isSuspended,
+      user
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      message: 'Error updating suspension status', 
       error: error.message 
     });
   }

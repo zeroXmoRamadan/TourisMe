@@ -13,69 +13,79 @@ const ReviewSection = ({ targetType, targetId }) => {
     const [newRating, setNewRating] = useState(0);
     const [newComment, setNewComment] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
-    const [editMode, setEditMode] = useState(false);
+    const [myReview, setMyReview] = useState(null);
 
-    const loadReviews = () => {
-        const r = reviewsService.getByTarget(targetType, targetId);
-        setReviews(r);
-        setRatingStats(reviewsService.getAverageRating(targetType, targetId));
+    const loadReviews = async () => {
+        setIsLoading(true);
+        const result = await reviewsService.getByTarget(targetId);
+        if (result.success) {
+            setReviews(result.reviews || []);
+            setRatingStats({
+                average: result.stats?.averageRating || 0,
+                count: result.stats?.totalReviews || 0
+            });
+        }
 
         // Check if user has existing review
-        if (user) {
-            const existingReview = reviewsService.getUserReview(targetType, targetId, user.id);
-            if (existingReview) {
-                setNewRating(existingReview.rating);
-                setNewComment(existingReview.comment);
-                setEditMode(true);
+        if (isAuthenticated) {
+            const check = await reviewsService.checkUserReview(targetId);
+            if (check.hasReviewed && check.review) {
+                setMyReview(check.review);
+                setNewRating(check.review.rating);
+                setNewComment(check.review.comment || '');
             }
         }
+        setIsLoading(false);
     };
 
     useEffect(() => {
         loadReviews();
-    }, [targetType, targetId, user]);
+    }, [targetId, isAuthenticated]);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         if (!newRating || !newComment.trim()) return;
 
         setIsSubmitting(true);
-
-        const result = reviewsService.create({
-            targetType,
-            targetId,
-            userId: user.id,
-            userName: `${user.firstName} ${user.lastName}`,
-            rating: newRating,
-            comment: newComment.trim(),
-        });
+        let result;
+        if (myReview) {
+            result = await reviewsService.update(myReview._id, {
+                rating: newRating,
+                comment: newComment.trim()
+            });
+        } else {
+            result = await reviewsService.create({
+                targetId,
+                targetModel: targetType, // This should be 'Attraction' or 'Service'
+                rating: newRating,
+                comment: newComment.trim(),
+            });
+        }
 
         if (result.success) {
-            loadReviews();
+            await loadReviews();
             setShowForm(false);
-            if (!editMode) {
-                setNewRating(0);
-                setNewComment('');
-            }
-            setEditMode(true);
+        } else {
+            alert(result.error || 'Failed to submit review');
         }
 
         setIsSubmitting(false);
     };
 
-    const handleDelete = (reviewId) => {
+    const handleDelete = async (reviewId) => {
         if (window.confirm('Are you sure you want to delete this review?')) {
-            const result = reviewsService.delete(reviewId);
+            const result = await reviewsService.delete(reviewId);
             if (result.success) {
-                loadReviews();
-                // Reset form if the deleted review was the user's own
-                const deleted = reviews.find(r => r.id === reviewId);
-                if (deleted && user && deleted.userId === user.id) {
+                await loadReviews();
+                if (myReview?._id === reviewId) {
+                    setMyReview(null);
                     setNewRating(0);
                     setNewComment('');
-                    setEditMode(false);
                 }
+            } else {
+                alert(result.error || 'Failed to delete review');
             }
         }
     };
@@ -115,12 +125,12 @@ const ReviewSection = ({ targetType, targetId }) => {
                             className="flex items-center gap-2"
                         >
                             <MessageSquare className="w-4 h-4" />
-                            {editMode ? 'Edit Your Review' : 'Write a Review'}
+                            {myReview ? 'Edit Your Review' : 'Write a Review'}
                         </Button>
                     ) : (
                         <div className="bg-dark-700/50 border border-white/10 rounded-2xl p-6">
                             <h3 className="text-lg font-semibold text-white mb-4">
-                                {editMode ? 'Update Your Review' : 'Write a Review'}
+                                {myReview ? 'Update Your Review' : 'Write a Review'}
                             </h3>
                             <form onSubmit={handleSubmit} className="space-y-4">
                                 <div>
@@ -156,7 +166,7 @@ const ReviewSection = ({ targetType, targetId }) => {
                                         className="flex items-center gap-2"
                                     >
                                         <Send className="w-4 h-4" />
-                                        {editMode ? 'Update Review' : 'Submit Review'}
+                                        {myReview ? 'Update Review' : 'Submit Review'}
                                     </Button>
                                     <Button
                                         type="button"
@@ -181,20 +191,29 @@ const ReviewSection = ({ targetType, targetId }) => {
             )}
 
             {/* Reviews List */}
-            {reviews.length > 0 ? (
+            {isLoading ? (
+                <div className="text-center py-8">
+                    <div className="w-8 h-8 border-2 border-primary-500/20 border-t-primary-500 rounded-full animate-spin mx-auto mb-3" />
+                    <p className="text-white/40">Loading reviews...</p>
+                </div>
+            ) : reviews.length > 0 ? (
                 <div className="space-y-4">
                     {reviews.map((review) => (
                         <div
-                            key={review.id}
+                            key={review._id}
                             className="bg-dark-700/30 border border-white/5 rounded-xl p-5 hover:border-white/10 transition-all duration-300"
                         >
                             <div className="flex items-start justify-between mb-3">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                                        {review.userName?.split(' ').map(n => n[0]).join('').toUpperCase()}
+                                        {review.touristId?.firstName ? 
+                                            `${review.touristId.firstName[0]}${review.touristId.lastName?.[0] || ''}`.toUpperCase() :
+                                            (review.userName || 'U').split(' ').map(n => n[0]).join('').toUpperCase()}
                                     </div>
                                     <div>
-                                        <p className="font-semibold text-white">{review.userName}</p>
+                                        <p className="font-semibold text-white">
+                                            {review.touristId?.firstName ? `${review.touristId.firstName} ${review.touristId.lastName || ''}` : review.userName}
+                                        </p>
                                         <p className="text-xs text-white/40">
                                             {formatDate(review.updatedAt || review.createdAt)}
                                             {review.updatedAt && review.updatedAt !== review.createdAt && ' (edited)'}
@@ -204,9 +223,9 @@ const ReviewSection = ({ targetType, targetId }) => {
                                 <div className="flex items-center gap-3">
                                     <StarRating rating={review.rating} size="sm" />
                                     {/* Admin can delete any review, user can delete own review */}
-                                    {(isAdmin || (user && user.id === review.userId)) && (
+                                    {(isAdmin || (user && (user._id === review.touristId?._id || user._id === review.touristId))) && (
                                         <button
-                                            onClick={() => handleDelete(review.id)}
+                                            onClick={() => handleDelete(review._id)}
                                             className="p-1.5 hover:bg-red-500/10 rounded-lg transition-colors group"
                                             title="Delete review"
                                         >

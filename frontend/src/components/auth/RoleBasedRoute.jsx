@@ -15,7 +15,7 @@ const RoleBasedRoute = ({ children, allowedRoles }) => {
     if (allowedRoles && !allowedRoles.includes(user?.role)) {
         // Redirect to their correct dashboard based on their role
         const dashboardMap = {
-            Admin: '/dashboard/admin',
+            Admin: '/admin/dashboard',
             Tourist: '/dashboard/tourist',
             LocalBusinessOwner: '/dashboard/provider',
         };

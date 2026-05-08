@@ -15,6 +15,7 @@ const Attractions = () => {
     const [attractions, setAttractions] = useState([]);
     const [categories, setCategories] = useState([]);
     const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+    const [loading, setLoading] = useState(true);
 
     const headerRef = useRef(null);
     const filtersRef = useRef(null);
@@ -22,23 +23,36 @@ const Attractions = () => {
     const hasInitiallyAnimated = useRef(false);
 
     useEffect(() => {
-        setCategories(attractionsService.getCategories());
+        const fetchCategories = async () => {
+            const cats = await attractionsService.getCategories();
+            setCategories(cats);
+        };
+        fetchCategories();
     }, []);
 
     useEffect(() => {
-        const filtered = attractionsService.filter({
-            category: selectedCategory,
-            searchQuery,
-        });
-        setAttractions(filtered);
+        const fetchAttractions = async () => {
+            setLoading(true);
+            const result = await attractionsService.filter({
+                category: selectedCategory,
+                searchQuery,
+            });
+            if (result.success) {
+                setAttractions(result.attractions);
+            }
+            setLoading(false);
 
-        if (hasInitiallyAnimated.current && cardsContainerRef.current) {
-            const cards = cardsContainerRef.current.querySelectorAll('.attraction-card');
-            gsap.fromTo(cards,
-                { opacity: 0, y: 20, scale: 0.98 },
-                { opacity: 1, y: 0, scale: 1, duration: 0.4, stagger: 0.08, ease: 'power2.out' }
-            );
-        }
+            if (hasInitiallyAnimated.current && cardsContainerRef.current) {
+                const cards = cardsContainerRef.current.querySelectorAll('.attraction-card');
+                if (cards.length > 0) {
+                    gsap.fromTo(cards,
+                        { opacity: 0, y: 20, scale: 0.98 },
+                        { opacity: 1, y: 0, scale: 1, duration: 0.4, stagger: 0.08, ease: 'power2.out' }
+                    );
+                }
+            }
+        };
+        fetchAttractions();
     }, [selectedCategory, searchQuery]);
 
     useEffect(() => {
@@ -53,14 +67,19 @@ const Attractions = () => {
         );
 
         if (cardsContainerRef.current) {
-            gsap.fromTo(cardsContainerRef.current.querySelectorAll('.attraction-card'),
-                { opacity: 0, y: 60, scale: 0.95 },
-                {
-                    opacity: 1, y: 0, scale: 1, duration: 0.6,
-                    stagger: 0.1, delay: 0.4, ease: 'power3.out',
-                    onComplete: () => { hasInitiallyAnimated.current = true; }
-                }
-            );
+            const cards = cardsContainerRef.current.querySelectorAll('.attraction-card');
+            if (cards.length > 0) {
+                gsap.fromTo(cards,
+                    { opacity: 0, y: 60, scale: 0.95 },
+                    {
+                        opacity: 1, y: 0, scale: 1, duration: 0.6,
+                        stagger: 0.1, delay: 0.4, ease: 'power3.out',
+                        onComplete: () => { hasInitiallyAnimated.current = true; }
+                    }
+                );
+            } else {
+                hasInitiallyAnimated.current = true;
+            }
         }
     }, []);
 
@@ -164,61 +183,74 @@ const Attractions = () => {
                         <div className="lg:col-span-3">
                             <div className="flex items-center justify-between mb-6">
                                 <p className="text-white/50">
-                                    <span className="font-semibold text-primary-400">{attractions.length}</span> attraction(s) found
+                                    {loading ? 'Searching...' : (
+                                        <>
+                                            <span className="font-semibold text-primary-400">{attractions.length}</span> attraction(s) found
+                                        </>
+                                    )}
                                 </p>
                             </div>
 
-                            <div ref={cardsContainerRef} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {attractions.map((attraction) => (
-                                    <div key={attraction.id} className="attraction-card h-full">
-                                        <Card
-                                            hover
-                                            padding={false}
-                                            onClick={() => navigate(`/attractions/${attraction.id}`)}
-                                            className="cursor-pointer h-full flex flex-col"
-                                        >
-                                            <div className="relative h-56 overflow-hidden">
-                                                <img
-                                                    src={attraction.image}
-                                                    alt={attraction.name}
-                                                    className="w-full h-full object-cover transform transition-transform duration-700 hover:scale-110"
-                                                />
-                                                <div className="absolute inset-0 bg-gradient-to-t from-dark-900 via-transparent to-transparent" />
-                                                <div className="absolute top-4 right-4">
-                                                    <span className="px-3 py-1 bg-dark-700/80 backdrop-blur-sm border border-white/10 rounded-full text-sm font-medium text-primary-400">
-                                                        {attraction.category}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div className="p-5 flex-1 flex flex-col">
-                                                <h3 className="text-xl font-bold mb-2 text-white">{attraction.name}</h3>
-                                                <p className="text-white/50 mb-4 line-clamp-2 flex-1">{attraction.shortDescription}</p>
-                                                <div className="flex items-center justify-between mb-3">
-                                                    <div className="flex items-center gap-1">
-                                                        <Star className="w-4 h-4 fill-primary-400 text-primary-400" />
-                                                        <span className="font-semibold text-white/80">{attraction.rating}</span>
-                                                        {attraction.reviewCount > 0 && (
-                                                            <span className="text-white/40 text-sm">({attraction.reviewCount})</span>
-                                                        )}
-                                                    </div>
-                                                    <span className="text-sm text-white/50 flex items-center gap-1">
-                                                        <MapPin className="w-4 h-4" />
-                                                        {attraction.location}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center justify-between pt-3 border-t border-white/10">
-                                                    <span className="text-sm text-white/40">{attraction.entryFee}</span>
-                                                    <span className="text-primary-400 font-semibold text-sm">
-                                                        View Details →
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </Card>
+                            <div ref={cardsContainerRef} className="grid grid-cols-1 md:grid-cols-2 gap-6 min-h-[400px]">
+                                {loading ? (
+                                    <div className="col-span-full flex items-center justify-center">
+                                        <div className="w-12 h-12 border-4 border-primary-500/20 border-t-primary-500 rounded-full animate-spin" />
                                     </div>
-                                ))}
+                                ) : (
+                                    attractions.map((attraction) => (
+                                        <div key={attraction._id} className="attraction-card h-full">
+                                            <Card
+                                                hover
+                                                padding={false}
+                                                onClick={() => navigate(`/attractions/${attraction._id}`)}
+                                                className="cursor-pointer h-full flex flex-col"
+                                            >
+                                                <div className="relative h-56 overflow-hidden">
+                                                    <img
+                                                        src={attraction.images?.[0] || attraction.image}
+                                                        alt={attraction.name}
+                                                        className="w-full h-full object-cover transform transition-transform duration-700 hover:scale-110"
+                                                    />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-dark-900 via-transparent to-transparent" />
+                                                    <div className="absolute top-4 right-4">
+                                                        <span className="px-3 py-1 bg-dark-700/80 backdrop-blur-sm border border-white/10 rounded-full text-sm font-medium text-primary-400">
+                                                            {attraction.category}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div className="p-5 flex-1 flex flex-col">
+                                                    <h3 className="text-xl font-bold mb-2 text-white">{attraction.name}</h3>
+                                                    <p className="text-white/50 mb-4 line-clamp-2 flex-1">{attraction.description}</p>
+                                                    <div className="flex items-center justify-between mb-3">
+                                                        <div className="flex items-center gap-1">
+                                                            <Star className="w-4 h-4 fill-primary-400 text-primary-400" />
+                                                            <span className="font-semibold text-white/80">{attraction.averageRating || attraction.rating || 0}</span>
+                                                            {(attraction.totalReviews || attraction.reviewCount) > 0 && (
+                                                                <span className="text-white/40 text-sm">({attraction.totalReviews || attraction.reviewCount})</span>
+                                                            )}
+                                                        </div>
+                                                        <span className="text-sm text-white/50 flex items-center gap-1">
+                                                            <MapPin className="w-4 h-4" />
+                                                            {typeof attraction.location === 'string' 
+                                                                ? attraction.location 
+                                                                : attraction.location?.address || 'Luxor, Egypt'
+                                                            }
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between pt-3 border-t border-white/10">
+                                                        <span className="text-sm text-white/40">{attraction.ticketPrice ? `$${attraction.ticketPrice}` : attraction.entryFee}</span>
+                                                        <span className="text-primary-400 font-semibold text-sm">
+                                                            View Details →
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </Card>
+                                        </div>
+                                    ))
+                                )}
                             </div>
 
-                            {attractions.length === 0 && (
+                            {!loading && attractions.length === 0 && (
                                 <div className="text-center py-16">
                                     <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-dark-700/50 flex items-center justify-center">
                                         <Search className="w-10 h-10 text-white/30" />

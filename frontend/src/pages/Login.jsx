@@ -22,6 +22,12 @@ const Login = () => {
     const from = location.state?.from || '/';
 
     useEffect(() => {
+        // Check for suspension message in URL
+        const params = new URLSearchParams(location.search);
+        if (params.get('suspended') === '1') {
+            setError('Your account has been suspended. Please contact support.');
+        }
+
         // Container fade in
         gsap.fromTo(containerRef.current,
             { opacity: 0 },

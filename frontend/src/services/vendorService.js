@@ -1,6 +1,18 @@
 import api from '../api/axios';
 
 class VendorService {
+    async getAll(params = {}) {
+        try {
+            const response = await api.get('/services', { 
+                params: { ...params, serviceType: 'TourPackage' } 
+            });
+            return response.data.services || response.data || [];
+        } catch (error) {
+            console.error('Error fetching programs:', error);
+            return [];
+        }
+    }
+
     async getByVendor() {
         try {
             const response = await api.get('/services/owner/my-services');
@@ -35,6 +47,24 @@ class VendorService {
             return { success: true };
         } catch (error) {
             return { success: false, error: error.response?.data?.message || 'Failed to delete program' };
+        }
+    }
+
+    async approve(id) {
+        try {
+            const response = await api.put(`/services/${id}/status`, { status: 'approved' });
+            return { success: true, program: response.data.service };
+        } catch (error) {
+            return { success: false, error: error.response?.data?.message || 'Failed to approve program' };
+        }
+    }
+
+    async reject(id) {
+        try {
+            const response = await api.put(`/services/${id}/status`, { status: 'rejected' });
+            return { success: true, program: response.data.service };
+        } catch (error) {
+            return { success: false, error: error.response?.data?.message || 'Failed to reject program' };
         }
     }
 

@@ -5,6 +5,7 @@ import {
   getUserById,
   updateUser,
   deleteUser,
+  toggleSuspend,
   getSystemStats
 } from '../controllers/adminController.js';
 import { protect, authorizeRoles } from '../middleware/authMiddleware.js';
@@ -23,6 +24,7 @@ router.get('/stats', getSystemStats);
 router.get('/users', getAllUsers);
 router.get('/users/:id', getUserById);
 router.put('/users/:id', updateUser);
+router.patch('/users/:id/suspend', toggleSuspend);
 router.delete('/users/:id', deleteUser);
 
-export default router;
+export default router;

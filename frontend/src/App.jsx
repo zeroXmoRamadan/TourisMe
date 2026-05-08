@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import Lenis from 'lenis';
 import { AuthProvider } from './contexts/AuthContext';
 import { ChatbotProvider } from './contexts/ChatbotContext';
@@ -29,6 +29,7 @@ import AdminUsers from './pages/admin/AdminUsers';
 import AdminPrograms from './pages/admin/AdminPrograms';
 import AdminTrips from './pages/admin/AdminTrips';
 import AdminServices from './pages/admin/AdminServices';
+import AdminDashboard from './pages/AdminDashboard';
 import VendorDashboard from './pages/vendor/VendorDashboard';
 import VendorServiceDetail from './pages/vendor/VendorServiceDetail';
 import VendorBookings from './pages/vendor/VendorBookings';
@@ -109,21 +110,13 @@ function App() {
                                                         <Attractions />
                                                     </TouristOrGuestRoute>
                                                 } />
-                                                <Route path="/attractions/:id" element={
-                                                    <TouristOrGuestRoute>
-                                                        <AttractionDetail />
-                                                    </TouristOrGuestRoute>
-                                                } />
+                                                <Route path="/attractions/:id" element={<AttractionDetail />} />
                                                 <Route path="/services" element={
                                                     <TouristOrGuestRoute>
                                                         <Services />
                                                     </TouristOrGuestRoute>
                                                 } />
-                                                <Route path="/services/:id" element={
-                                                    <TouristOrGuestRoute>
-                                                        <ServiceDetail />
-                                                    </TouristOrGuestRoute>
-                                                } />
+                                                <Route path="/services/:id" element={<ServiceDetail />} />
                                                 <Route path="/about" element={<About />} />
                                                 <Route path="/contact" element={<Contact />} />
 
@@ -172,6 +165,17 @@ function App() {
                                                 } />
 
                                                 {/* Admin routes */}
+                                                <Route path="/admin" element={
+                                                    <AdminRoute>
+                                                        <Navigate to="/admin/dashboard" replace />
+                                                    </AdminRoute>
+                                                } />
+                                                <Route path="/admin/dashboard" element={
+                                                    <AdminRoute>
+                                                        <AdminDashboard />
+                                                    </AdminRoute>
+                                                } />
+                                                <Route path="/dashboard/admin" element={<Navigate to="/admin/dashboard" replace />} />
                                                 <Route path="/admin/attractions" element={
                                                     <AdminRoute>
                                                         <AdminAttractions />

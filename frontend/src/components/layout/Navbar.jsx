@@ -68,6 +68,15 @@ const Navbar = () => {
             ];
         }
 
+        if (user?.role === 'Admin') {
+            return [
+                { path: '/admin/dashboard', label: 'Dashboard' },
+                { path: '/admin/users', label: 'Users' },
+                { path: '/admin/attractions', label: 'Attractions' },
+                { path: '/about', label: 'About' },
+            ];
+        }
+
         return [
             { path: '/', label: 'Home' },
             { path: '/services', label: 'Services' },
@@ -231,6 +240,14 @@ const Navbar = () => {
                                                         <span className="text-xs text-white/30 uppercase tracking-wider flex items-center gap-1"><Shield className="w-3 h-3" />Admin</span>
                                                     </div>
                                                     <Link
+                                                        to="/admin/dashboard"
+                                                        className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors"
+                                                        onClick={() => setIsUserMenuOpen(false)}
+                                                    >
+                                                        <Shield className="w-4 h-4 text-primary-400" />
+                                                        <span className="text-white/80">Command Center</span>
+                                                    </Link>
+                                                    <Link
                                                         to="/admin/users"
                                                         className="flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors"
                                                         onClick={() => setIsUserMenuOpen(false)}
@@ -244,7 +261,7 @@ const Navbar = () => {
                                                         onClick={() => setIsUserMenuOpen(false)}
                                                     >
                                                         <Package className="w-4 h-4 text-primary-400" />
-                                                        <span className="text-white/80">Program Approvals</span>
+                                                        <span className="text-white/80">Monitor Programs</span>
                                                     </Link>
                                                     <Link
                                                         to="/admin/attractions"
@@ -260,7 +277,7 @@ const Navbar = () => {
                                                         onClick={() => setIsUserMenuOpen(false)}
                                                     >
                                                         <Car className="w-4 h-4 text-primary-400" />
-                                                        <span className="text-white/80">Service Approvals</span>
+                                                        <span className="text-white/80">Monitor Services</span>
                                                     </Link>
                                                     <Link
                                                         to="/admin/trips"
@@ -426,6 +443,14 @@ const Navbar = () => {
                                                 <span className="text-xs text-white/30 uppercase tracking-wider flex items-center gap-1"><Shield className="w-3 h-3" />Admin</span>
                                             </div>
                                             <Link
+                                                to="/admin/dashboard"
+                                                onClick={() => setIsMenuOpen(false)}
+                                                className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/5 hover:text-white transition-colors"
+                                            >
+                                                <Shield className="w-5 h-5 text-primary-400" />
+                                                Command Center
+                                            </Link>
+                                            <Link
                                                 to="/admin/users"
                                                 onClick={() => setIsMenuOpen(false)}
                                                 className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/5 hover:text-white transition-colors"
@@ -439,7 +464,7 @@ const Navbar = () => {
                                                 className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/5 hover:text-white transition-colors"
                                             >
                                                 <Package className="w-5 h-5 text-primary-400" />
-                                                Program Approvals
+                                                Monitor Programs
                                             </Link>
                                             <Link
                                                 to="/admin/attractions"
@@ -455,7 +480,7 @@ const Navbar = () => {
                                                 className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/5 hover:text-white transition-colors"
                                             >
                                                 <Car className="w-5 h-5 text-primary-400" />
-                                                Service Approvals
+                                                Monitor Services
                                             </Link>
                                             <Link
                                                 to="/admin/trips"

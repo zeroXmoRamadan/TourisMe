@@ -13,13 +13,13 @@ import Alert from '../../components/common/Alert';
 const SERVICE_CATEGORY_ICONS = { car_rental: Car, bicycle_rental: Bike, restaurant: UtensilsCrossed, temple_visit: Landmark };
 
 const emptyForm = {
-    name: '', description: '', price: '', durationDays: '', itinerary: '', includedItems: [''], imageFile: null
+    name: '', description: '', price: '', durationDays: '', itinerary: '', includedItems: [''], imageFiles: null
 };
 
 const emptySvcForm = {
     name: '', category: 'Rental', price: '', description: '',
     vehicleType: '', capacity: '', conditions: '',
-    cuisineType: '', tableCapacity: '', imageFile: null
+    cuisineType: '', tableCapacity: '', imageFiles: null
 };
 
 const VendorDashboard = () => {
@@ -69,7 +69,8 @@ const VendorDashboard = () => {
             name: p.name, durationDays: p.durationDays || '', price: p.price,
             itinerary: p.itinerary || '', description: p.description || '',
             includedItems: p.includedItems?.length > 0 ? [...p.includedItems] : [''],
-            imageFile: null
+            imageFiles: null,
+            currentImages: p.images || []
         });
         setEditingId(p._id); setShowForm(true);
     };
@@ -89,12 +90,12 @@ const VendorDashboard = () => {
         data.append('itinerary', formData.itinerary);
         
         const included = formData.includedItems.filter(h => h.trim());
-        included.forEach((item, index) => {
-            data.append(`includedItems[${index}]`, item);
+        included.forEach((item) => {
+            data.append('includedItems', item);
         });
 
-        if (formData.imageFile) {
-            Array.from(formData.imageFile).forEach(file => {
+        if (formData.imageFiles) {
+            Array.from(formData.imageFiles).forEach(file => {
                 data.append('images', file);
             });
         }
@@ -154,8 +155,8 @@ const VendorDashboard = () => {
             data.append('tableCapacity', Number(svcFormData.tableCapacity));
         }
 
-        if (svcFormData.imageFile) {
-            Array.from(svcFormData.imageFile).forEach(file => {
+        if (svcFormData.imageFiles) {
+            Array.from(svcFormData.imageFiles).forEach(file => {
                 data.append('images', file);
             });
         }
@@ -183,7 +184,8 @@ const VendorDashboard = () => {
             name: s.name, category: s.serviceType, price: s.price, description: s.description || '', 
             vehicleType: s.vehicleType || '', capacity: s.capacity || '', conditions: s.conditions || '',
             cuisineType: s.cuisineType || '', tableCapacity: s.tableCapacity || '',
-            imageFile: null 
+            imageFiles: null,
+            currentImages: s.images || []
         });
         setEditingSvcId(s._id); setShowSvcForm(true);
     };
@@ -270,17 +272,40 @@ const VendorDashboard = () => {
                                     <textarea value={formData.itinerary} onChange={(e) => setFormData({ ...formData, itinerary: e.target.value })} rows={3} className="w-full px-4 py-3 bg-dark-700/50 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all duration-300" placeholder="e.g. Day 1: Arrival..." required />
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium mb-2 text-white/80">Upload Images <span className="text-white/30 font-normal">(max 10MB each)</span></label>
+                                    <label className="block text-sm font-medium mb-2 text-white/80">Upload Images <span className="text-white/30 font-normal">(max 5 images, 10MB each)</span></label>
                                     <input type="file" multiple accept="image/*" onChange={(e) => {
                                         const files = Array.from(e.target.files);
+                                        if (files.length > 5) {
+                                            setAlert({ type: 'error', message: 'You can only upload up to 5 images.' });
+                                            e.target.value = '';
+                                            return;
+                                        }
                                         const oversized = files.find(f => f.size > 10 * 1024 * 1024);
                                         if (oversized) {
                                             setAlert({ type: 'error', message: `"${oversized.name}" exceeds the 10MB limit. Please choose a smaller image.` });
                                             e.target.value = '';
                                             return;
                                         }
-                                        setFormData({ ...formData, imageFile: e.target.files });
+                                        setFormData({ ...formData, imageFiles: e.target.files });
                                     }} className="w-full px-4 py-3 bg-dark-700/50 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all duration-300" />
+                                    
+                                    {formData.imageFiles && (
+                                        <div className="mt-2 text-xs text-primary-400 font-medium flex items-center gap-1">
+                                            <Plus className="w-3 h-3" />
+                                            {formData.imageFiles.length} new images selected
+                                        </div>
+                                    )}
+
+                                    {formData.currentImages?.length > 0 && (
+                                        <div className="mt-3">
+                                            <p className="text-xs text-white/40 mb-2">Current Images (will be replaced if new ones are uploaded):</p>
+                                            <div className="flex gap-2 overflow-x-auto pb-2">
+                                                {formData.currentImages.map((img, i) => (
+                                                    <img key={i} src={img} alt="" className="w-16 h-12 rounded-lg object-cover border border-white/10" />
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                                 {['includedItems'].map(field => (
                                     <div key={field}>
@@ -430,17 +455,40 @@ const VendorDashboard = () => {
                                 )}
 
                                 <div>
-                                    <label className="block text-sm font-medium mb-2 text-white/80">Upload Images <span className="text-white/30 font-normal">(max 10MB each)</span></label>
+                                    <label className="block text-sm font-medium mb-2 text-white/80">Upload Images <span className="text-white/30 font-normal">(max 5 images, 10MB each)</span></label>
                                     <input type="file" multiple accept="image/*" onChange={(e) => {
                                         const files = Array.from(e.target.files);
+                                        if (files.length > 5) {
+                                            setAlert({ type: 'error', message: 'You can only upload up to 5 images.' });
+                                            e.target.value = '';
+                                            return;
+                                        }
                                         const oversized = files.find(f => f.size > 10 * 1024 * 1024);
                                         if (oversized) {
                                             setAlert({ type: 'error', message: `"${oversized.name}" exceeds the 10MB limit. Please choose a smaller image.` });
                                             e.target.value = '';
                                             return;
                                         }
-                                        setSvcFormData({ ...svcFormData, imageFile: e.target.files });
+                                        setSvcFormData({ ...svcFormData, imageFiles: e.target.files });
                                     }} className="w-full px-4 py-3 bg-dark-700/50 border border-white/10 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50 transition-all duration-300" />
+                                    
+                                    {svcFormData.imageFiles && (
+                                        <div className="mt-2 text-xs text-primary-400 font-medium flex items-center gap-1">
+                                            <Plus className="w-3 h-3" />
+                                            {svcFormData.imageFiles.length} new images selected
+                                        </div>
+                                    )}
+
+                                    {svcFormData.currentImages?.length > 0 && (
+                                        <div className="mt-3">
+                                            <p className="text-xs text-white/40 mb-2">Current Images (will be replaced if new ones are uploaded):</p>
+                                            <div className="flex gap-2 overflow-x-auto pb-2">
+                                                {svcFormData.currentImages.map((img, i) => (
+                                                    <img key={i} src={img} alt="" className="w-16 h-12 rounded-lg object-cover border border-white/10" />
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium mb-2 text-white/80">Description</label>

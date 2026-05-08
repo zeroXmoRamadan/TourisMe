@@ -132,7 +132,7 @@ const UserManagement = () => {
                     <div>
                         <Button
                             variant="ghost"
-                            onClick={() => navigate('/dashboard/admin')}
+                            onClick={() => navigate('/admin/dashboard')}
                             className="mb-4"
                         >
                             <ArrowLeft className="w-4 h-4 mr-2" />
@@ -253,7 +253,16 @@ const UserManagement = () => {
                                                     )}
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 text-white/70">{user.email}</td>
+                                            <td className="px-6 py-4 text-white/70">
+                                                <div className="flex flex-col gap-0.5">
+                                                    <p>{user.email}</p>
+                                                    {user.role === 'LocalBusinessOwner' && (
+                                                        <p className="text-white/50 text-xs">
+                                                            {user.firstName} {user.lastName}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </td>
                                             <td className="px-6 py-4">
                                                 <select
                                                     value={user.role}

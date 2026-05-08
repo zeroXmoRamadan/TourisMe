@@ -12,6 +12,11 @@ const serviceSchema = new Schema({
     type: String, 
     enum: ['Restaurant', 'Rental', 'TourPackage'], 
     required: true 
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected'],
+    default: 'pending'
   }
 }, { discriminatorKey: 'serviceType', timestamps: true });
 

@@ -21,6 +21,15 @@ export const protect = async (req, res, next) => {
       return res.status(401).json({ message: 'User not found.' });
     }
 
+    // Reject every request from a suspended account so the client can tear down the session
+    // EXCEPT for logout which helps the client clear their session
+    if (req.user.isSuspended && !req.originalUrl.endsWith('/logout')) {
+      return res.status(403).json({ 
+        message: 'Your account has been suspended. Please contact support.',
+        suspended: true
+      });
+    }
+
     next(); // Move to the next middleware or route handler
   } catch (error) {
     console.error(error);

@@ -24,8 +24,22 @@ router.get('/category/:category', getAttractionsByCategory);
 router.get('/:id', getAttractionById);
 
 // Protected routes (Admin only)
-router.post('/', protect, authorizeRoles('Admin'), upload.array('images', 5),createAttraction); // 'images' must match the key in the frontend FormData
-router.put('/:id', protect, authorizeRoles('Admin'), updateAttraction);
+router.post('/', protect, authorizeRoles('Admin'), upload.array('images', 5), createAttraction); 
+router.put('/:id', protect, authorizeRoles('Admin'), upload.array('images', 5), updateAttraction);
 router.delete('/:id', protect, authorizeRoles('Admin'), deleteAttraction);
+
+// Multer error handler
+router.use((err, req, res, next) => {
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(400).json({ message: 'Image too large. Maximum file size is 10MB.' });
+  }
+  if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+    return res.status(400).json({ message: 'Too many files. Maximum is 5 images.' });
+  }
+  if (err.message === 'Only image files are allowed!') {
+    return res.status(400).json({ message: err.message });
+  }
+  next(err);
+});
 
 export default router;

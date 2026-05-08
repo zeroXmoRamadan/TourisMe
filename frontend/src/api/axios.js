@@ -7,9 +7,28 @@ const api = axios.create({
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    // We let the application handle 401s (e.g. AuthContext setting user to null)
-    // instead of a hard redirect which causes infinite loops on load.
+  async (error) => {
+    const data = error.response?.data;
+
+    // Suspended account: clear the httpOnly cookie via the logout endpoint, then
+    // redirect to /login so AuthContext re-initialises to null on next load.
+    if (error.response?.status === 403 && data?.suspended === true) {
+      if (!window.location.pathname.includes('/login')) {
+        try {
+          // Best-effort logout (clears the httpOnly cookie server-side)
+          await axios.post('/api/auth/logout', {}, { withCredentials: true });
+        } catch (_) {
+          // ignore – we're redirecting anyway
+        }
+        window.location.replace('/login?suspended=1');
+        return new Promise(() => {}); // prevent further .catch handlers
+      }
+      
+      // If we are already on login page, let the error propagate so the form can show it
+      return Promise.reject(error);
+    }
+
+    // All other errors propagate normally
     return Promise.reject(error);
   }
 );
