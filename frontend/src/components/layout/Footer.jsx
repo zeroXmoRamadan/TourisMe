@@ -16,7 +16,7 @@ const Footer = () => {
     const contactInfo = [
         { icon: MapPin, text: 'Luxor, Egypt' },
         { icon: Phone, text: '+20 123 456 7890' },
-        { icon: Mail, text: 'info@luxorexplore.com' },
+        { icon: Mail, text: 'info@tourisme.com' },
     ];
 
     return (
@@ -29,15 +29,15 @@ const Footer = () => {
                     {/* Brand */}
                     <div className="lg:col-span-1">
                         <Link to="/" className="flex items-center gap-3 mb-6 group">
-                            <div className="w-11 h-11 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(242,133,109,0.3)] group-hover:shadow-[0_0_30px_rgba(242,133,109,0.5)] transition-all duration-300">
-                                <Plane className="w-6 h-6 text-white" />
+                            <div className="w-11 h-11 rounded-xl overflow-hidden shadow-[0_0_20px_rgba(242,133,109,0.3)] group-hover:shadow-[0_0_30px_rgba(242,133,109,0.5)] transition-all duration-300">
+                                <img src="/favicon.png" alt="TourisMe Icon" className="w-full h-full object-cover" />
                             </div>
                             <span className="text-2xl font-display font-bold bg-gradient-to-r from-primary-400 to-secondary-500 bg-clip-text text-transparent">
-                                LuxorExplore
+                                TourisMe
                             </span>
                         </Link>
                         <p className="text-white/50 leading-relaxed">
-                            Your trusted partner for exploring ancient Luxor with exclusive discounts from top tourism companies.
+                            Your trusted partner for exploring Egypt with exclusive discounts from top tourism companies.
                         </p>
                     </div>
 
@@ -100,7 +100,7 @@ const Footer = () => {
                 <div className="border-t border-white/5 mt-12 pt-8">
                     <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                         <p className="text-white/40 text-sm">
-                            © {currentYear} LuxorExplore. All rights reserved.
+                            © {currentYear} TourisMe. All rights reserved.
                         </p>
                         <div className="flex items-center gap-6 text-sm text-white/40">
                             <Link to="/privacy" className="hover:text-primary-400 transition-colors">Privacy Policy</Link>

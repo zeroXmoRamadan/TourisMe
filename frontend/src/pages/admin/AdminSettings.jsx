@@ -15,7 +15,7 @@ const AdminSettings = () => {
 
     const [settings, setSettings] = useState({
         // Platform Settings
-        siteName: 'TourisMe - Luxor Tourism',
+        siteName: 'TourisMe',
         siteDescription: 'Discover the wonders of ancient Egypt with premium tour experiences',
         contactEmail: 'support@touris.me',
         contactPhone: '+20 123 456 7890',

@@ -279,14 +279,13 @@ const Home = () => {
                     </div>
 
                     <h1 className="hero-title text-5xl md:text-7xl lg:text-8xl font-display font-bold mb-6 leading-tight">
-                        <span className="block text-white">Explore Ancient</span>
                         <span className="block bg-gradient-to-r from-primary-400 via-primary-500 to-secondary-500 bg-clip-text text-transparent">
-                            Luxor
+                            TourisMe
                         </span>
                     </h1>
 
                     <p className="hero-subtitle text-xl md:text-2xl mb-4 text-white/60 max-w-3xl mx-auto leading-relaxed">
-                        Book exclusive tour programs from top tourism companies and save up to
+                        Discover ancient Egypt and book exclusive tour programs — save up to
                         <span className="text-primary-400 font-semibold"> 20% </span>
                         on your adventure
                     </p>
@@ -565,7 +564,7 @@ const Home = () => {
 
                 <div className="cta-content container-custom relative z-10 text-center">
                     <h2 className="text-4xl md:text-5xl font-display font-bold mb-6 text-white">
-                        Ready to <span className="bg-gradient-to-r from-primary-400 to-secondary-500 bg-clip-text text-transparent">Explore</span> Ancient Luxor?
+                        Ready to explore Egypt with <span className="bg-gradient-to-r from-primary-400 to-secondary-500 bg-clip-text text-transparent">TourisMe</span>?
                     </h2>
                     <p className="text-xl text-white/60 mb-10 max-w-2xl mx-auto">
                         Book your dream tour today and save up to 20% on exclusive programs

@@ -103,11 +103,11 @@ const Navbar = () => {
                 <div className="flex items-center justify-between h-20">
                     {/* Logo */}
                     <Link to="/" className="flex items-center gap-3 group">
-                        <div className="w-11 h-11 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(242,133,109,0.3)] group-hover:shadow-[0_0_30px_rgba(242,133,109,0.5)] transition-all duration-300">
-                            <Plane className="w-6 h-6 text-white" />
+                        <div className="w-11 h-11 rounded-xl overflow-hidden shadow-[0_0_20px_rgba(242,133,109,0.3)] group-hover:shadow-[0_0_30px_rgba(242,133,109,0.5)] transition-all duration-300">
+                            <img src="/favicon.png" alt="TourisMe Icon" className="w-full h-full object-cover" />
                         </div>
                         <span className="text-2xl font-display font-bold bg-gradient-to-r from-primary-400 via-primary-500 to-secondary-500 bg-clip-text text-transparent">
-                            LuxorExplore
+                            TourisMe
                         </span>
                     </Link>
 

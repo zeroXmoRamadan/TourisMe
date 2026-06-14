@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
-import { User, Mail, Lock, Phone, Loader2, Plane, ArrowLeft } from 'lucide-react';
+import { User, Mail, Lock, Phone, Plane, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/common/Button';
 import Alert from '../components/common/Alert';
@@ -199,7 +199,7 @@ const SignupTourist = ({ onBack }) => {
                 </div>
 
                 <Button type="submit" variant="primary" fullWidth size="lg" loading={loading}>
-                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Create Tourist Account'}
+                    Create Tourist Account
                 </Button>
             </form>
 

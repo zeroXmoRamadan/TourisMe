@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
-import { Building2, Mail, Lock, Phone, FileText, CreditCard, User, Loader2, ArrowLeft } from 'lucide-react';
+import { Building2, Mail, Lock, Phone, FileText, CreditCard, User, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/common/Button';
 import Alert from '../components/common/Alert';
@@ -259,7 +259,7 @@ const SignupServiceProvider = ({ onBack }) => {
                 </div>
 
                 <Button type="submit" variant="primary" fullWidth size="lg" loading={loading}>
-                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Create Provider Account'}
+                    Create Provider Account
                 </Button>
             </form>
 

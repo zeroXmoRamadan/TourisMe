@@ -71,7 +71,7 @@ const About = () => {
 
                 <div className="container-custom relative z-10 text-center">
                     <h1 className="text-4xl md:text-6xl font-display font-bold mb-6 text-white">
-                        About <span className="bg-gradient-to-r from-primary-400 to-secondary-500 bg-clip-text text-transparent">LuxorExplore</span>
+                        About <span className="bg-gradient-to-r from-primary-400 to-secondary-500 bg-clip-text text-transparent">TourisMe</span>
                     </h1>
                     <p className="text-xl text-white/50 max-w-2xl mx-auto">
                         Your trusted partner for discovering the wonders of ancient Luxor
@@ -91,7 +91,7 @@ const About = () => {
                                 <h2 className="text-3xl font-bold mb-6 text-white">Our Story</h2>
                                 <div className="space-y-6 text-white/60 text-lg leading-relaxed">
                                     <p>
-                                        LuxorExplore connects travelers with the best tourism companies in Luxor, Egypt,
+                                        TourisMe connects travelers with the best tourism companies in Egypt,
                                         offering exclusive discounts on pre-made tour programs. We believe everyone should
                                         experience the wonders of ancient Egypt affordably.
                                     </p>
