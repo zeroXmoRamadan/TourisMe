@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
-import { User, Mail, Lock, Phone, Loader2, Plane, ArrowLeft, Building2 } from 'lucide-react';
+import { User, Mail, Lock, Phone, Plane, ArrowLeft, Building2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
@@ -101,17 +101,17 @@ const Signup = () => {
             <div ref={formRef} className="max-w-md w-full relative z-10">
                 {/* Logo */}
                 <div className="flex items-center gap-3 mb-8 justify-center">
-                    <div className="w-11 h-11 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(242,133,109,0.3)]">
-                        <Plane className="w-6 h-6 text-white" />
+                    <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-[0_0_20px_rgba(242,133,109,0.3)]">
+                        <img src="/favicon.png" alt="TourisMe Icon" className="w-full h-full object-cover" />
                     </div>
-                    <span className="text-2xl font-display font-bold bg-gradient-to-r from-primary-400 to-secondary-500 bg-clip-text text-transparent">
-                        LuxorExplore
+                    <span className="text-3xl font-display font-bold bg-gradient-to-r from-primary-400 to-secondary-500 bg-clip-text text-transparent">
+                        TourisMe
                     </span>
                 </div>
 
                 <div className="text-center mb-8">
                     <h1 className="text-3xl font-display font-bold text-white mb-2">Create Account</h1>
-                    <p className="text-white/50">Join LuxorExplore and start your adventure</p>
+                    <p className="text-white/50">Join TourisMe and start your adventure</p>
                 </div>
 
                 {error && (
@@ -243,7 +243,7 @@ const Signup = () => {
                     </div>
 
                     <Button type="submit" variant="primary" fullWidth size="lg" loading={loading}>
-                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Create Account'}
+                        Create Account
                     </Button>
                 </form>
 

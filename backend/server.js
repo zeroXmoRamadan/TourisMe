@@ -13,6 +13,7 @@ import reviewRoutes from './routes/review.routes.js';
 import adsRoutes from './routes/ads.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
 import tripPlanRoutes from './routes/tripPlan.routes.js';
+import chatRoutes from './routes/chat.routes.js';
 
 const app = express();
 
@@ -20,6 +21,7 @@ const app = express();
 app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
 app.use(express.json());
 app.use(cookieParser());
+app.use('/api/chat', chatRoutes);
 
 
 // MongoDB Connection
@@ -31,7 +33,7 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/merndb')
 
   // default routes
 app.get('/api', (req, res) => {
-  res.json({ message: 'Welcome to MERN API' });
+  res.json({ message: 'Welcome to TourisMe API' });
 });
 
 

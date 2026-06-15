@@ -50,3 +50,21 @@ export const authorizeRoles = (...allowedRoles) => {
     next();
   };
 };
+
+// Sets req.user when a valid token is present; continues without auth otherwise
+export const optionalProtect = async (req, res, next) => {
+  try {
+    const token = req.cookies.token;
+    if (!token) return next();
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = await User.findById(decoded.id).select('-passwordHash');
+
+    if (req.user?.isSuspended) {
+      req.user = null;
+    }
+  } catch {
+    // Invalid token — treat as unauthenticated
+  }
+  next();
+};

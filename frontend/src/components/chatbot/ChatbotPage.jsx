@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { X, Send, Loader2, Bot, User as UserIcon, Sparkles } from 'lucide-react';
 import { useChatbot } from '../../contexts/ChatbotContext';
 import Button from '../common/Button';
+import ChatMarkdown from './ChatMarkdown';
 
 const ChatbotPage = () => {
     const { isOpen, messages, isTyping, closeChatbot, sendMessage } = useChatbot();
@@ -10,7 +11,7 @@ const ChatbotPage = () => {
     const messagesEndRef = useRef(null);
 
     const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
     };
 
     useEffect(() => {
@@ -32,10 +33,10 @@ const ChatbotPage = () => {
     };
 
     const quickQuestions = [
-        'Tell me about Karnak Temple',
-        'What tour programs do you offer?',
-        'How much can I save?',
-        'Best time to visit Luxor?',
+        'Plan a 3-day trip to Luxor',
+        'Best restaurants in Cairo?',
+        'Nile cruise options and prices',
+        'Activities in Hurghada?',
     ];
 
     return (
@@ -44,12 +45,12 @@ const ChatbotPage = () => {
                 <>
                     {/* Backdrop */}
                     <motion.div
-                        className="fixed inset-0 bg-dark-900/80 backdrop-blur-sm z-40"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={closeChatbot}
-                    />
+    			className="fixed inset-0 bg-dark-900/80 z-40"
+    			initial={{ opacity: 0 }}
+    			animate={{ opacity: 1 }}
+    			exit={{ opacity: 0 }}
+    			onClick={closeChatbot}
+		    />
 
                     {/* Chatbot Container */}
                     <motion.div
@@ -67,7 +68,7 @@ const ChatbotPage = () => {
                                 </div>
                                 <div>
                                     <h2 className="text-xl font-bold flex items-center gap-2">
-                                        LuxorExplore Assistant
+                                        TourisMe Assistant
                                         <Sparkles className="w-4 h-4" />
                                     </h2>
                                     <p className="text-sm text-white/80">Powered by AI</p>
@@ -82,15 +83,15 @@ const ChatbotPage = () => {
                         </div>
 
                         {/* Messages Area */}
-                        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-dark-900">
+                        <div 
+    			    className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4 bg-dark-900"
+    			    onWheel={(e) => e.stopPropagation()}
+    			    onTouchMove={(e) => e.stopPropagation()}
+			>
                             {messages.map((message) => (
-                                <motion.div
+                                <div
                                     key={message.id}
-                                    className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'
-                                        }`}
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ duration: 0.3 }}
+                                    className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                                 >
                                     {message.role === 'assistant' && (
                                         <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-xl flex items-center justify-center flex-shrink-0 shadow-[0_0_15px_rgba(242,133,109,0.3)]">
@@ -103,7 +104,13 @@ const ChatbotPage = () => {
                                             : 'bg-dark-700 border border-white/10 text-white/90 rounded-tl-none'
                                             }`}
                                     >
-                                        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                                        <div className="leading-relaxed">
+                                            {message.role === 'assistant' ? (
+                                                <ChatMarkdown content={message.content} />
+                                            ) : (
+                                                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                                            )}
+                                        </div>
                                         <p className="text-xs mt-1 opacity-50">
                                             {new Date(message.timestamp).toLocaleTimeString([], {
                                                 hour: '2-digit',
@@ -116,14 +123,14 @@ const ChatbotPage = () => {
                                             <UserIcon className="w-5 h-5 text-white/60" />
                                         </div>
                                     )}
-                                </motion.div>
+                                </div>
                             ))}
 
                             {/* Typing Indicator */}
                             {isTyping && (
                                 <motion.div
                                     className="flex gap-3 justify-start"
-                                    initial={{ opacity: 0, y: 20 }}
+                                    initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                 >
                                     <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(242,133,109,0.3)]">
@@ -163,8 +170,7 @@ const ChatbotPage = () => {
                                         <button
                                             key={index}
                                             onClick={() => {
-                                                setInputValue(question);
-                                                setTimeout(handleSend, 100);
+                                                sendMessage(question);
                                             }}
                                             className="text-xs bg-white/5 hover:bg-white/10 text-white/70 hover:text-white px-3 py-2 rounded-full transition-all duration-300 border border-white/5 hover:border-primary-500/30"
                                         >
@@ -183,7 +189,7 @@ const ChatbotPage = () => {
                                     value={inputValue}
                                     onChange={(e) => setInputValue(e.target.value)}
                                     onKeyPress={handleKeyPress}
-                                    placeholder="Ask about Luxor tours..."
+                                    placeholder="Ask about Egypt trips..."
                                     disabled={isTyping}
                                     className="flex-1 px-4 py-3 bg-dark-700/50 border border-white/10 rounded-xl text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500/50 disabled:opacity-50 transition-all duration-300"
                                 />

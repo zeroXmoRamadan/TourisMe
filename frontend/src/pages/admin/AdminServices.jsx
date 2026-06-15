@@ -20,7 +20,7 @@ const AdminServices = () => {
     const contentRef = useRef(null);
 
     const load = async () => {
-        const result = await individualServicesService.getAll();
+        const result = await individualServicesService.getApproved();
         setServices(result);
     };
     useEffect(() => { load(); }, []);

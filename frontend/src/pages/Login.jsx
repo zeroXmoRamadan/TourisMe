@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import gsap from 'gsap';
-import { Mail, Lock, Loader2, Plane, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, Plane, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
@@ -52,7 +52,7 @@ const Login = () => {
             if (result.user?.role === 'LocalBusinessOwner') {
                 navigate('/vendor/dashboard', { replace: true });
             } else if (result.user?.role === 'Admin') {
-                navigate('/admin/users', { replace: true });
+                navigate('/admin/dashboard', { replace: true });
             } else {
                 navigate(from, { replace: true });
             }
@@ -84,17 +84,17 @@ const Login = () => {
             <div ref={formRef} className="max-w-md w-full relative z-10">
                 {/* Logo */}
                 <div className="flex items-center gap-3 mb-8 justify-center">
-                    <div className="w-11 h-11 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(242,133,109,0.3)]">
-                        <Plane className="w-6 h-6 text-white" />
+                    <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-[0_0_20px_rgba(242,133,109,0.3)]">
+                        <img src="/favicon.png" alt="TourisMe Icon" className="w-full h-full object-cover" />
                     </div>
-                    <span className="text-2xl font-display font-bold bg-gradient-to-r from-primary-400 to-secondary-500 bg-clip-text text-transparent">
-                        LuxorExplore
+                    <span className="text-3xl font-display font-bold bg-gradient-to-r from-primary-400 to-secondary-500 bg-clip-text text-transparent">
+                        TourisMe
                     </span>
                 </div>
 
                 <div className="text-center mb-8">
                     <h1 className="text-3xl font-display font-bold text-white mb-2">Log In</h1>
-                    <p className="text-white/50">Log in to your LuxorExplore account</p>
+                    <p className="text-white/50">Log in to your TourisMe account</p>
                 </div>
 
                 {error && (
@@ -136,7 +136,7 @@ const Login = () => {
                     </div>
 
                     <Button type="submit" variant="primary" fullWidth size="lg" loading={loading}>
-                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Log In'}
+                        Log In
                     </Button>
                 </form>
 

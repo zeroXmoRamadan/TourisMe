@@ -3,6 +3,7 @@ import api from '../api/axios';
 const SERVICE_CATEGORIES = [
     { id: 'Rental', label: 'Vehicle/Equipment Rental', icon: 'Car', color: 'blue' },
     { id: 'Restaurant', label: 'Restaurant', icon: 'UtensilsCrossed', color: 'orange' },
+    { id: 'TourPackage', label: 'Tour Package', icon: 'Landmark', color: 'purple' },
 ];
 
 class IndividualServicesService {
@@ -22,7 +23,7 @@ class IndividualServicesService {
 
     async getApproved() {
         try {
-            const response = await api.get('/services');
+            const response = await api.get('/services', { params: { limit: 100 } });
             return response.data.services || response.data || [];
         } catch (error) {
             console.error('Error fetching services:', error);

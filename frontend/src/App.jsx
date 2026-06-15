@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
-import Lenis from 'lenis';
 import { AuthProvider } from './contexts/AuthContext';
 import { ChatbotProvider } from './contexts/ChatbotContext';
 import ChatbotButton from './components/chatbot/ChatbotButton';
@@ -40,6 +39,19 @@ import Notifications from './pages/Notifications';
 import NotFound from './pages/NotFound';
 import TouristOrVendorRoute from './components/auth/TouristOrVendorRoute';
 
+// Hide chatbot on auth pages
+const ChatbotGate = () => {
+    const { pathname } = useLocation();
+    const hideOn = ['/login', '/signup'];
+    if (hideOn.includes(pathname)) return null;
+    return (
+        <>
+            <ChatbotButton />
+            <ChatbotPage />
+        </>
+    );
+};
+
 // Scroll to top on route change
 const ScrollToTop = () => {
     const { pathname } = useLocation();
@@ -51,48 +63,13 @@ const ScrollToTop = () => {
     return null;
 };
 
-// Lenis Smooth Scroll Provider
-const SmoothScrollProvider = ({ children }) => {
-    useEffect(() => {
-        const lenis = new Lenis({
-            duration: 1.2,
-            easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-            direction: 'vertical',
-            gestureDirection: 'vertical',
-            smooth: true,
-            mouseMultiplier: 1,
-            smoothTouch: false,
-            touchMultiplier: 2,
-            infinite: false,
-        });
-
-        function raf(time) {
-            lenis.raf(time);
-            requestAnimationFrame(raf);
-        }
-
-        requestAnimationFrame(raf);
-
-        // Make lenis available globally for other components
-        window.lenis = lenis;
-
-        return () => {
-            lenis.destroy();
-            window.lenis = null;
-        };
-    }, []);
-
-    return children;
-};
-
 function App() {
     return (
         <AuthProvider>
             <ChatbotProvider>
                 <Router>
-                    <SmoothScrollProvider>
-                        <ScrollToTop />
-                        <div className="flex flex-col min-h-screen bg-dark-900">
+                    <ScrollToTop />
+                    <div className="flex flex-col min-h-screen bg-dark-900">
                             <Routes>
                                 {/* Auth routes without navbar/footer */}
                                 <Route path="/login" element={<Login />} />
@@ -210,9 +187,7 @@ function App() {
                                 } />
                             </Routes>
                         </div>
-                        <ChatbotButton />
-                        <ChatbotPage />
-                    </SmoothScrollProvider>
+                        <ChatbotGate />
                 </Router>
             </ChatbotProvider>
         </AuthProvider>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
-import { Search, Star, MapPin, Filter, X, Landmark } from 'lucide-react';
+import { Search, Star, Filter, X, Landmark } from 'lucide-react';
 import attractionsService from '../services/attractionsService';
 import Card from '../components/common/Card';
 import Input from '../components/common/Input';
@@ -221,7 +221,7 @@ const Attractions = () => {
                                                 <div className="p-5 flex-1 flex flex-col">
                                                     <h3 className="text-xl font-bold mb-2 text-white">{attraction.name}</h3>
                                                     <p className="text-white/50 mb-4 line-clamp-2 flex-1">{attraction.description}</p>
-                                                    <div className="flex items-center justify-between mb-3">
+                                                    <div className="flex items-center mb-3">
                                                         <div className="flex items-center gap-1">
                                                             <Star className="w-4 h-4 fill-primary-400 text-primary-400" />
                                                             <span className="font-semibold text-white/80">{attraction.averageRating || attraction.rating || 0}</span>
@@ -229,13 +229,6 @@ const Attractions = () => {
                                                                 <span className="text-white/40 text-sm">({attraction.totalReviews || attraction.reviewCount})</span>
                                                             )}
                                                         </div>
-                                                        <span className="text-sm text-white/50 flex items-center gap-1">
-                                                            <MapPin className="w-4 h-4" />
-                                                            {typeof attraction.location === 'string' 
-                                                                ? attraction.location 
-                                                                : attraction.location?.address || 'Luxor, Egypt'
-                                                            }
-                                                        </span>
                                                     </div>
                                                     <div className="flex items-center justify-between pt-3 border-t border-white/10">
                                                         <span className="text-sm text-white/40">{attraction.ticketPrice ? `$${attraction.ticketPrice}` : attraction.entryFee}</span>

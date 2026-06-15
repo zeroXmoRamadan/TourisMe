@@ -10,7 +10,7 @@ const TouristOrGuestRoute = ({ children }) => {
             return <Navigate to="/vendor/dashboard" replace />;
         }
         if (user?.role === 'Admin') {
-            return <Navigate to="/admin/users" replace />;
+            return <Navigate to="/admin/dashboard" replace />;
         }
     }
 

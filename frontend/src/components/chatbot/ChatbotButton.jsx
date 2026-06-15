@@ -17,7 +17,7 @@ const ChatbotButton = () => {
                 <MessageCircle className="w-6 h-6" />
                 <Sparkles className="w-3 h-3 sparkle" />
             </div>
-            <div className="tooltip">Ask me anything about Luxor!</div>
+            <div className="tooltip">TourisMe Assistant</div>
         </button>
     );
 };

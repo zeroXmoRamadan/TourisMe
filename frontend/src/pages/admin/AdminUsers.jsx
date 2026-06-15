@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Ban, CheckCircle, Mail, Search, Shield, User, Users } from 'lucide-react';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
@@ -15,6 +15,7 @@ const AdminUsers = () => {
     const [page, setPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
     const [totalUsers, setTotalUsers] = useState(0);
+    const [roleCounts, setRoleCounts] = useState({ Admin: 0, LocalBusinessOwner: 0, Tourist: 0 });
     const [loading, setLoading] = useState(false);
     const [alert, setAlert] = useState(null);
     const [suspendTarget, setSuspendTarget] = useState(null); // { user, action: 'suspend'|'unsuspend' }
@@ -35,17 +36,14 @@ const AdminUsers = () => {
             setUsers(result.users || []);
             setTotalPages(result.totalPages || 1);
             setTotalUsers(result.totalUsers || 0);
+            if (result.roleCounts) setRoleCounts(result.roleCounts);
         } else {
             setAlert({ type: 'error', message: result.error });
         }
         setLoading(false);
     };
 
-    const roleCounts = useMemo(() => ({
-        Admin: users.filter((u) => u.role === 'Admin').length,
-        LocalBusinessOwner: users.filter((u) => u.role === 'LocalBusinessOwner').length,
-        Tourist: users.filter((u) => u.role === 'Tourist').length,
-    }), [users]);
+
 
     const handleToggleSuspend = async () => {
         if (!suspendTarget) return;

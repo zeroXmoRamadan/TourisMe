@@ -32,7 +32,7 @@ const RoleSelection = ({ onSelectRole }) => {
         {
             id: 'tourist',
             title: 'Tourist',
-            description: 'Book amazing tours and explore Luxor',
+            description: 'Book amazing tours and explore Egypt with TourisMe',
             icon: Plane,
             gradient: 'from-primary-500 to-primary-600',
             glow: 'shadow-[0_0_30px_rgba(242,133,109,0.3)]',
@@ -53,17 +53,17 @@ const RoleSelection = ({ onSelectRole }) => {
         <div ref={containerRef} className="max-w-4xl w-full">
             {/* Logo */}
             <div className="flex items-center gap-3 mb-8 justify-center">
-                <div className="w-11 h-11 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(242,133,109,0.3)]">
-                    <Plane className="w-6 h-6 text-white" />
+                <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-[0_0_20px_rgba(242,133,109,0.3)]">
+                    <img src="/favicon.png" alt="TourisMe Icon" className="w-full h-full object-cover" />
                 </div>
-                <span className="text-2xl font-display font-bold bg-gradient-to-r from-primary-400 to-secondary-500 bg-clip-text text-transparent">
-                    LuxorExplore
+                <span className="text-3xl font-display font-bold bg-gradient-to-r from-primary-400 to-secondary-500 bg-clip-text text-transparent">
+                    TourisMe
                 </span>
             </div>
 
             <div className="text-center mb-12">
                 <h1 className="text-4xl md:text-5xl font-display font-bold text-white mb-3">
-                    Join <span className="bg-gradient-to-r from-primary-400 to-secondary-500 bg-clip-text text-transparent">LuxorExplore</span>
+                    Join <span className="bg-gradient-to-r from-primary-400 to-secondary-500 bg-clip-text text-transparent">TourisMe</span>
                 </h1>
                 <p className="text-xl text-white/60">Choose how you want to get started</p>
             </div>
