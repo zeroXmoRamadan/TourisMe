@@ -165,7 +165,7 @@ export const getReviewsByTarget = async (req, res) => {
       },
       {
         $project: {
-          averageRating: 1,
+          averageRating: { $round: ['$averageRating', 1] },
           totalReviews: 1,
           ratingDistribution: {
             5: { $size: { $filter: { input: '$ratings', cond: { $eq: ['$$this', 5] } } } },

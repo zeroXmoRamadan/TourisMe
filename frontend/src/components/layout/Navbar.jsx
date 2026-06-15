@@ -59,12 +59,9 @@ const Navbar = () => {
 
         if (user?.role === 'LocalBusinessOwner') {
             return [
-                { path: '/', label: 'Home' },
                 { path: '/vendor/dashboard', label: 'Dashboard' },
                 { path: '/vendor/bookings', label: 'Booking Requests' },
                 ...inbox,
-                { path: '/about', label: 'About' },
-                { path: '/contact', label: 'Contact' },
             ];
         }
 
@@ -73,7 +70,9 @@ const Navbar = () => {
                 { path: '/admin/dashboard', label: 'Dashboard' },
                 { path: '/admin/users', label: 'Users' },
                 { path: '/admin/attractions', label: 'Attractions' },
-                { path: '/about', label: 'About' },
+                { path: '/admin/programs', label: 'Programs' },
+                { path: '/admin/services', label: 'Services' },
+                { path: '/admin/trips', label: 'Trip Plans' },
             ];
         }
 
@@ -245,7 +244,7 @@ const Navbar = () => {
                                                         onClick={() => setIsUserMenuOpen(false)}
                                                     >
                                                         <Shield className="w-4 h-4 text-primary-400" />
-                                                        <span className="text-white/80">Command Center</span>
+                                                        <span className="text-white/80">Dashboard</span>
                                                     </Link>
                                                     <Link
                                                         to="/admin/users"
@@ -285,8 +284,9 @@ const Navbar = () => {
                                                         onClick={() => setIsUserMenuOpen(false)}
                                                     >
                                                         <MapPin className="w-4 h-4 text-primary-400" />
-                                                        <span className="text-white/80">Trip Monitor</span>
+                                                        <span className="text-white/80">Trip Plans Monitor</span>
                                                     </Link>
+
                                                 </>
                                             )}
                                             <hr className="my-2 border-white/10" />
@@ -448,7 +448,7 @@ const Navbar = () => {
                                                 className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/5 hover:text-white transition-colors"
                                             >
                                                 <Shield className="w-5 h-5 text-primary-400" />
-                                                Command Center
+                                                Dashboard
                                             </Link>
                                             <Link
                                                 to="/admin/users"
@@ -488,8 +488,9 @@ const Navbar = () => {
                                                 className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/5 hover:text-white transition-colors"
                                             >
                                                 <MapPin className="w-5 h-5 text-primary-400" />
-                                                Trip Monitor
+                                                Trip Plans Monitor
                                             </Link>
+
                                         </>
                                     )}
                                     <hr className="my-3 border-white/10" />

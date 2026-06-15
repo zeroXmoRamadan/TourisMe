@@ -52,7 +52,7 @@ const Login = () => {
             if (result.user?.role === 'LocalBusinessOwner') {
                 navigate('/vendor/dashboard', { replace: true });
             } else if (result.user?.role === 'Admin') {
-                navigate('/admin/users', { replace: true });
+                navigate('/admin/dashboard', { replace: true });
             } else {
                 navigate(from, { replace: true });
             }

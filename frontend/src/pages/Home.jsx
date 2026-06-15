@@ -2,21 +2,37 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { Search, Star, Users, TrendingUp, Shield, Award, HeartHandshake, Sparkles, MapPin, Landmark, Car, UtensilsCrossed } from 'lucide-react';
+import { Search, Star, Users, TrendingUp, Shield, Award, HeartHandshake, Sparkles, Landmark, Car, UtensilsCrossed } from 'lucide-react';
 
 import attractionsService from '../services/attractionsService';
 import individualServicesService from '../services/individualServicesService';
 import Card from '../components/common/Card';
 import Button from '../components/common/Button';
 import DiscountBadge from '../components/common/DiscountBadge';
+import { useAuth } from '../contexts/AuthContext';
 
 gsap.registerPlugin(ScrollTrigger);
 
 const Home = () => {
     const navigate = useNavigate();
+    const { user, isAuthenticated } = useAuth();
     const [searchQuery, setSearchQuery] = useState('');
     const [popularServices, setPopularServices] = useState([]);
     const [topAttractions, setTopAttractions] = useState([]);
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            if (user?.role === 'Admin') {
+                navigate('/admin/dashboard', { replace: true });
+            } else if (user?.role === 'LocalBusinessOwner') {
+                navigate('/vendor/dashboard', { replace: true });
+            }
+        }
+    }, [isAuthenticated, user, navigate]);
+
+    if (isAuthenticated && (user?.role === 'Admin' || user?.role === 'LocalBusinessOwner')) {
+        return null;
+    }
 
     // Refs for GSAP animation
     const heroRef = useRef(null);
@@ -39,7 +55,7 @@ const Home = () => {
     useEffect(() => {
         individualServicesService.getApproved().then((services) => {
             const sorted = services
-                .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0) || (b.reviews ?? 0) - (a.reviews ?? 0))
+                .sort((a, b) => (b.averageRating ?? 0) - (a.averageRating ?? 0) || (b.totalReviews ?? 0) - (a.totalReviews ?? 0))
                 .slice(0, 3);
             setPopularServices(sorted);
         });
@@ -452,8 +468,8 @@ const Home = () => {
                                                 <div className="flex items-center justify-between pt-4 border-t border-white/10">
                                                     <div className="flex items-center gap-1">
                                                         <Star className="w-4 h-4 fill-primary-400 text-primary-400" />
-                                                        <span className="font-semibold text-white/80">{service.rating}</span>
-                                                        <span className="text-xs text-white/40 ml-1">({service.reviews})</span>
+                                                        <span className="font-semibold text-white/80">{service.averageRating?.toFixed(1) || '—'}</span>
+                                                        <span className="text-xs text-white/40 ml-1">({service.totalReviews || 0})</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -496,15 +512,12 @@ const Home = () => {
                                     <div className="p-6 flex-1 flex flex-col">
                                         <h3 className="text-xl font-bold text-white mb-2">{attraction.name}</h3>
                                         <p className="text-white/50 mb-4 line-clamp-2 flex-1">{attraction.description}</p>
-                                        <div className="flex items-center justify-between pt-4 border-t border-white/10">
+                                        <div className="flex items-center pt-4 border-t border-white/10">
                                             <div className="flex items-center gap-1">
                                                 <Star className="w-4 h-4 fill-primary-400 text-primary-400" />
-                                                <span className="font-semibold text-white/80">{attraction.averageRating || 0}</span>
+                                                <span className="font-semibold text-white/80">{attraction.averageRating?.toFixed(1) || '—'}</span>
+                                                <span className="text-xs text-white/40 ml-1">({attraction.totalReviews || 0})</span>
                                             </div>
-                                            <span className="text-sm text-white/50 flex items-center gap-1">
-                                                <MapPin className="w-4 h-4" />
-                                                {typeof attraction.location === 'string' ? attraction.location : attraction.location?.address || 'Luxor'}
-                                            </span>
                                         </div>
                                     </div>
                                 </Card>

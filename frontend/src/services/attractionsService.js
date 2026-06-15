@@ -29,7 +29,7 @@ class AttractionsService {
     }
 
     async filter({ category, searchQuery } = {}) {
-        const params = {};
+        const params = { limit: 100 };
         if (category) params.category = category;
         if (searchQuery) params.search = searchQuery;
         
@@ -38,13 +38,10 @@ class AttractionsService {
 
     async getCategories() {
         try {
-            const result = await this.getAll({ limit: 100 });
-            if (result.success) {
-                const cats = result.attractions.map(a => a.category);
-                return [...new Set(cats.filter(Boolean))];
-            }
-            return [];
+            const response = await api.get('/attractions/categories');
+            return response.data || [];
         } catch (error) {
+            console.error('Error fetching categories:', error);
             return [];
         }
     }

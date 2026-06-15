@@ -1,4 +1,37 @@
 import Attraction from '../models/attraction.model.js';
+import Review from '../models/reviews.model.js';
+
+const attachReviewStatsForAttractions = async (attractions) => {
+  if (!attractions?.length) return attractions;
+
+  const attractionIds = attractions.map((attraction) => attraction._id);
+  const reviewStats = await Review.aggregate([
+    {
+      $match: {
+        targetModel: 'Attraction',
+        targetId: { $in: attractionIds }
+      }
+    },
+    {
+      $group: {
+        _id: '$targetId',
+        totalReviews: { $sum: 1 }
+      }
+    }
+  ]);
+
+  const reviewStatsById = new Map(
+    reviewStats.map((item) => [item._id.toString(), item.totalReviews])
+  );
+
+  return attractions.map((attractionDoc) => {
+    const attraction = attractionDoc.toObject ? attractionDoc.toObject() : attractionDoc;
+    return {
+      ...attraction,
+      totalReviews: reviewStatsById.get(attraction._id.toString()) || 0
+    };
+  });
+};
 
 // @desc    Get all attractions (with filtering, pagination, and search)
 // @route   GET /api/attractions
@@ -60,11 +93,12 @@ export const getAttractions = async (req, res) => {
       .sort(sort)
       .skip(skip)
       .limit(parseInt(limit));
+    const attractionsWithReviewCounts = await attachReviewStatsForAttractions(attractions);
 
     const total = await Attraction.countDocuments(query);
 
     res.status(200).json({
-      attractions,
+      attractions: attractionsWithReviewCounts,
       currentPage: parseInt(page),
       totalPages: Math.ceil(total / parseInt(limit)),
       totalAttractions: total

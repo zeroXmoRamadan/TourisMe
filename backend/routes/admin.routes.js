@@ -6,7 +6,10 @@ import {
   updateUser,
   deleteUser,
   toggleSuspend,
-  getSystemStats
+  getSystemStats,
+  getAllTripPlans,
+  getAdminTripStats,
+  deleteTripPlanAsAdmin
 } from '../controllers/adminController.js';
 import { protect, authorizeRoles } from '../middleware/authMiddleware.js';
 
@@ -19,6 +22,11 @@ router.use(authorizeRoles('Admin'));
 // Dashboard analytics
 router.get('/dashboard', getDashboardStats);
 router.get('/stats', getSystemStats);
+
+// Trip management
+router.get('/trips', getAllTripPlans);
+router.get('/trips/stats', getAdminTripStats);
+router.delete('/trips/:id', deleteTripPlanAsAdmin);
 
 // User management
 router.get('/users', getAllUsers);
