@@ -5,36 +5,12 @@
 @tailwind utilities;
 
 /* ============================================
-   LENIS SMOOTH SCROLL STYLES
-   ============================================ */
-html.lenis, html.lenis body {
-  height: auto;
-}
-
-.lenis.lenis-smooth {
-  scroll-behavior: auto !important;
-}
-
-.lenis.lenis-smooth [data-lenis-prevent] {
-  overscroll-behavior: contain;
-}
-
-.lenis.lenis-stopped {
-  overflow: hidden;
-}
-
-.lenis.lenis-scrolling iframe {
-  pointer-events: none;
-}
-
-/* ============================================
    BASE STYLES - DARK MODE
    ============================================ */
 @layer base {
   body {
     @apply bg-dark-900 text-white font-sans antialiased;
     background: linear-gradient(135deg, #0d0628 0%, #120a33 50%, #0d0628 100%);
-    background-attachment: fixed;
   }
 
   h1, h2, h3, h4, h5, h6 {

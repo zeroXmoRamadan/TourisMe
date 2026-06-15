@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { Star, MapPin, Clock, Ticket, ArrowLeft, Landmark, Plus, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Star, Clock, Ticket, ArrowLeft, Landmark, Plus, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 import attractionsService from '../services/attractionsService';
 import reviewsService from '../services/reviewsService';
 import tripPlannerService from '../services/tripPlannerService';
@@ -280,16 +280,6 @@ const AttractionDetail = () => {
                                 {attraction.name}
                             </h1>
                             <div className="flex items-center gap-4 flex-wrap">
-                                <div className="flex items-center gap-2 text-white/70">
-                                    <MapPin className="w-4 h-4 text-primary-400" />
-                                    <span className="text-sm">
-                                        {typeof attraction.location === 'string' 
-                                            ? attraction.location 
-                                            : attraction.location?.address || 'Luxor, Egypt'
-                                        }
-                                    </span>
-                                </div>
-                                <span className="text-white/20">•</span>
                                 <div className="flex items-center gap-2">
                                     <div className="flex items-center gap-0.5">
                                         {[1, 2, 3, 4, 5].map(s => (
@@ -362,26 +352,7 @@ const AttractionDetail = () => {
                                             <span className="font-medium text-white">{attraction.ticketPrice ? `$${attraction.ticketPrice}` : attraction.entryFee}</span>
                                         </div>
 
-                                        <div className="flex justify-between py-3 border-b border-white/10">
-                                            <span className="flex items-center gap-2 text-white/60">
-                                                <Ticket className="w-5 h-5 text-primary-400" />
-                                                Entry Fee
-                                            </span>
-                                            <span className="font-medium text-white">{attraction.ticketPrice ? `$${attraction.ticketPrice}` : attraction.entryFee}</span>
-                                        </div>
 
-                                        <div className="flex justify-between py-3 border-b border-white/10">
-                                            <span className="flex items-center gap-2 text-white/60">
-                                                <MapPin className="w-5 h-5 text-primary-400" />
-                                                Location
-                                            </span>
-                                            <span className="font-medium text-white text-sm text-right">
-                                                {typeof attraction.location === 'string' 
-                                                    ? attraction.location 
-                                                    : attraction.location?.address || 'Luxor, Egypt'
-                                                }
-                                            </span>
-                                        </div>
 
                                         <div className="flex justify-between py-3">
                                             <span className="text-white/60">Rating</span>

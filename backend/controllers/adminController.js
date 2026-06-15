@@ -88,6 +88,7 @@ export const getDashboardStats = async (req, res) => {
       // 4. Most Planned Attractions
       TripPlan.aggregate([
         { $unwind: '$itineraryItems' },
+        { $match: { 'itineraryItems.attractionId': { $exists: true, $ne: null } } },
         { $group: { 
             _id: '$itineraryItems.attractionId', 
             timesPlanned: { $sum: 1 } 
@@ -227,19 +228,28 @@ export const getAllUsers = async (req, res) => {
       ];
     }
 
-    const users = await User.find(query)
-      .select('-passwordHash')
-      .skip(skip)
-      .limit(parseInt(limit))
-      .sort({ createdAt: -1 });
+    const [users, total, roleCounts] = await Promise.all([
+      User.find(query)
+        .select('-passwordHash')
+        .skip(skip)
+        .limit(parseInt(limit))
+        .sort({ createdAt: -1 }),
+      User.countDocuments(query),
+      User.aggregate([
+        { $group: { _id: '$role', count: { $sum: 1 } } }
+      ])
+    ]);
 
-    const total = await User.countDocuments(query);
+    // Convert roleCounts array to an object: { Tourist: 10, Admin: 2, ... }
+    const roleCountsObj = {};
+    roleCounts.forEach(r => { roleCountsObj[r._id] = r.count; });
 
     res.status(200).json({
       users,
       currentPage: parseInt(page),
       totalPages: Math.ceil(total / parseInt(limit)),
-      totalUsers: total
+      totalUsers: total,
+      roleCounts: roleCountsObj
     });
   } catch (error) {
     res.status(500).json({ 
@@ -410,6 +420,87 @@ export const getSystemStats = async (req, res) => {
   } catch (error) {
     res.status(500).json({ 
       message: 'Error fetching system stats', 
+      error: error.message 
+    });
+  }
+};
+
+// @desc    Get all trip plans for all users
+// @route   GET /api/admin/trips
+// @access  Private (Admin only)
+export const getAllTripPlans = async (req, res) => {
+  try {
+    const trips = await TripPlan.find({})
+      .populate('touristId', 'firstName lastName email')
+      .populate('itineraryItems.attractionId', 'name category images ticketPrice location openingHours averageRating')
+      .populate('itineraryItems.serviceId', 'name serviceType images price averageRating location')
+      .sort({ createdAt: -1 });
+    res.status(200).json(trips);
+  } catch (error) {
+    res.status(500).json({ 
+      message: 'Error fetching trip plans', 
+      error: error.message 
+    });
+  }
+};
+
+// @desc    Get comprehensive trip plans statistics
+// @route   GET /api/admin/trips/stats
+// @access  Private (Admin only)
+export const getAdminTripStats = async (req, res) => {
+  try {
+    const trips = await TripPlan.find({})
+      .populate('itineraryItems.attractionId', 'ticketPrice')
+      .populate('itineraryItems.serviceId', 'price');
+    
+    let totalRevenue = 0;
+    let planning = 0;
+    let confirmed = 0;
+    let completed = 0;
+
+    trips.forEach(t => {
+      let totalBudget = t.budget || 0;
+      (t.itineraryItems || []).forEach(item => {
+        const target = item.attractionId || item.serviceId;
+        totalBudget += target?.price || target?.ticketPrice || 0;
+      });
+      totalRevenue += totalBudget;
+
+      if (t.status === 'Draft') planning++;
+      else if (t.status === 'Confirmed') confirmed++;
+      else if (t.status === 'Completed') completed++;
+    });
+
+    res.status(200).json({
+      total: trips.length,
+      planning,
+      confirmed,
+      completed,
+      cancelled: 0,
+      totalRevenue
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      message: 'Error fetching trip statistics', 
+      error: error.message 
+    });
+  }
+};
+
+// @desc    Delete a user's trip plan
+// @route   DELETE /api/admin/trips/:id
+// @access  Private (Admin only)
+export const deleteTripPlanAsAdmin = async (req, res) => {
+  try {
+    const trip = await TripPlan.findById(req.params.id);
+    if (!trip) {
+      return res.status(404).json({ message: 'Trip plan not found' });
+    }
+    await trip.deleteOne();
+    res.status(200).json({ message: 'Trip plan deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ 
+      message: 'Error deleting trip plan', 
       error: error.message 
     });
   }

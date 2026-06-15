@@ -17,7 +17,7 @@ const Contact = () => {
     const contactInfo = [
         { icon: MapPin, title: 'Address', value: 'Luxor, Egypt', color: 'from-primary-500' },
         { icon: Phone, title: 'Phone', value: '+20 123 456 7890', color: 'from-secondary-500' },
-        { icon: Mail, title: 'Email', value: 'info@luxorexplore.com', color: 'from-primary-500' },
+        { icon: Mail, title: 'Email', value: 'info@tourisme.com', color: 'from-primary-500' },
     ];
 
     useEffect(() => {

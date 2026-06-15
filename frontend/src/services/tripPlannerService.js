@@ -6,10 +6,17 @@ class TripPlannerService {
         
         const mappedItems = (trip.itineraryItems || []).map(item => {
             const target = item.attractionId || item.serviceId;
+            let type = 'unknown';
+            if (item.attractionId) {
+                type = 'attraction';
+            } else if (item.serviceId) {
+                type = target?.serviceType?.toLowerCase() || 'service';
+            }
             return {
                 id: item._id, // itinerary item ID
                 targetId: target?._id,
                 category: target?.category || target?.serviceType || 'unknown',
+                type,
                 serviceName: target?.name || 'Unknown',
                 image: target?.images?.[0] || 'https://images.unsplash.com/photo-1568322445389-f64ac2515020?w=100',
                 price: target?.price || target?.ticketPrice || 0,
@@ -20,12 +27,22 @@ class TripPlannerService {
 
         const totalBudget = mappedItems.reduce((sum, item) => sum + (item.price || 0), 0) + (trip.budget || 0);
 
+        const statusMap = {
+            'Draft': 'planning',
+            'Confirmed': 'confirmed',
+            'Completed': 'completed',
+        };
+        const status = statusMap[trip.status] || trip.status?.toLowerCase() || 'planning';
+        const userName = trip.touristId ? `${trip.touristId.firstName || ''} ${trip.touristId.lastName || ''}`.trim() : 'Unknown';
+
         return {
             ...trip,
             id: trip._id,
             name: trip.title,
+            userName,
             date: trip.startDate ? new Date(trip.startDate).toISOString().split('T')[0] : '',
             items: mappedItems,
+            status,
             totalBudget
         };
     }
@@ -127,6 +144,33 @@ class TripPlannerService {
             return response.data;
         } catch (error) {
             return {};
+        }
+    }
+
+    async getAllTrips() {
+        try {
+            const response = await api.get('/admin/trips');
+            return response.data.map(t => this.mapTrip(t));
+        } catch (error) {
+            return [];
+        }
+    }
+
+    async getAdminStats() {
+        try {
+            const response = await api.get('/admin/trips/stats');
+            return response.data;
+        } catch (error) {
+            return { total: 0, planning: 0, confirmed: 0, completed: 0, cancelled: 0, totalRevenue: 0 };
+        }
+    }
+
+    async deleteTripAsAdmin(id) {
+        try {
+            await api.delete(`/admin/trips/${id}`);
+            return { success: true };
+        } catch (error) {
+            return { success: false, error: error.response?.data?.message || 'Failed to delete trip' };
         }
     }
 }

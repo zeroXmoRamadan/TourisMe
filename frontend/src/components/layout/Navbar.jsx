@@ -59,12 +59,9 @@ const Navbar = () => {
 
         if (user?.role === 'LocalBusinessOwner') {
             return [
-                { path: '/', label: 'Home' },
                 { path: '/vendor/dashboard', label: 'Dashboard' },
                 { path: '/vendor/bookings', label: 'Booking Requests' },
                 ...inbox,
-                { path: '/about', label: 'About' },
-                { path: '/contact', label: 'Contact' },
             ];
         }
 
@@ -73,7 +70,9 @@ const Navbar = () => {
                 { path: '/admin/dashboard', label: 'Dashboard' },
                 { path: '/admin/users', label: 'Users' },
                 { path: '/admin/attractions', label: 'Attractions' },
-                { path: '/about', label: 'About' },
+                { path: '/admin/programs', label: 'Programs' },
+                { path: '/admin/services', label: 'Services' },
+                { path: '/admin/trips', label: 'Trip Plans' },
             ];
         }
 
@@ -103,11 +102,11 @@ const Navbar = () => {
                 <div className="flex items-center justify-between h-20">
                     {/* Logo */}
                     <Link to="/" className="flex items-center gap-3 group">
-                        <div className="w-11 h-11 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-xl flex items-center justify-center shadow-[0_0_20px_rgba(242,133,109,0.3)] group-hover:shadow-[0_0_30px_rgba(242,133,109,0.5)] transition-all duration-300">
-                            <Plane className="w-6 h-6 text-white" />
+                        <div className="w-11 h-11 rounded-xl overflow-hidden shadow-[0_0_20px_rgba(242,133,109,0.3)] group-hover:shadow-[0_0_30px_rgba(242,133,109,0.5)] transition-all duration-300">
+                            <img src="/favicon.png" alt="TourisMe Icon" className="w-full h-full object-cover" />
                         </div>
                         <span className="text-2xl font-display font-bold bg-gradient-to-r from-primary-400 via-primary-500 to-secondary-500 bg-clip-text text-transparent">
-                            LuxorExplore
+                            TourisMe
                         </span>
                     </Link>
 
@@ -245,7 +244,7 @@ const Navbar = () => {
                                                         onClick={() => setIsUserMenuOpen(false)}
                                                     >
                                                         <Shield className="w-4 h-4 text-primary-400" />
-                                                        <span className="text-white/80">Command Center</span>
+                                                        <span className="text-white/80">Dashboard</span>
                                                     </Link>
                                                     <Link
                                                         to="/admin/users"
@@ -285,8 +284,9 @@ const Navbar = () => {
                                                         onClick={() => setIsUserMenuOpen(false)}
                                                     >
                                                         <MapPin className="w-4 h-4 text-primary-400" />
-                                                        <span className="text-white/80">Trip Monitor</span>
+                                                        <span className="text-white/80">Trip Plans Monitor</span>
                                                     </Link>
+
                                                 </>
                                             )}
                                             <hr className="my-2 border-white/10" />
@@ -448,7 +448,7 @@ const Navbar = () => {
                                                 className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/5 hover:text-white transition-colors"
                                             >
                                                 <Shield className="w-5 h-5 text-primary-400" />
-                                                Command Center
+                                                Dashboard
                                             </Link>
                                             <Link
                                                 to="/admin/users"
@@ -488,8 +488,9 @@ const Navbar = () => {
                                                 className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/70 hover:bg-white/5 hover:text-white transition-colors"
                                             >
                                                 <MapPin className="w-5 h-5 text-primary-400" />
-                                                Trip Monitor
+                                                Trip Plans Monitor
                                             </Link>
+
                                         </>
                                     )}
                                     <hr className="my-3 border-white/10" />

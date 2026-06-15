@@ -40,8 +40,11 @@ const Button = ({
             className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${width} ${className}`}
             {...props}
         >
-            {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            {children}
+            {loading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+                children
+            )}
         </button>
     );
 };
