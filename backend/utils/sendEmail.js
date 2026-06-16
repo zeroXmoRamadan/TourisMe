@@ -139,7 +139,7 @@ export const emailTemplates = {
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h1 style="color: #3498db;">Welcome to TourisMe Luxor!</h1>
-        <p>Hi ${user.name},</p>
+        <p>Hi ${user.firstName || user.lastName},</p>
         <p>Thank you for joining TourisMe Luxor. We're excited to have you!</p>
         
         <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">

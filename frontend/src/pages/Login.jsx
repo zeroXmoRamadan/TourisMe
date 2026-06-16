@@ -130,9 +130,10 @@ const Login = () => {
                             />
                             <span className="text-sm text-white/50">Remember me</span>
                         </label>
-                        <span title="Coming soon" className="text-sm text-white/50 cursor-not-allowed opacity-50">
+                        {/* Forgot password? — not implemented yet */}
+                        {/* <span title="Coming soon" className="text-sm text-white/50 cursor-not-allowed opacity-50">
                             Forgot password?
-                        </span>
+                        </span> */}
                     </div>
 
                     <Button type="submit" variant="primary" fullWidth size="lg" loading={loading}>

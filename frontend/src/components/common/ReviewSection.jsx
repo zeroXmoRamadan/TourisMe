@@ -116,7 +116,7 @@ const ReviewSection = ({ targetType, targetId }) => {
             </div>
 
             {/* Write Review Button / Form */}
-            {isAuthenticated && (
+            {isAuthenticated && !isAdmin && (
                 <div className="mb-8">
                     {!showForm ? (
                         <Button
